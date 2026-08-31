@@ -8,3 +8,4 @@ venv/
 *.log
 data/raw/
 data/interim/
+artifacts/
