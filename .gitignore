@@ -8,4 +8,6 @@ venv/
 *.log
 data/raw/
 data/interim/
-artifacts/
+# artifacts/ SI se commitean: son el contrato con Partes B y C.
+# Si tu Python no puede cargar los pickles (version distinta), regenera corriendo
+# el notebook hasta el final de la Seccion 4C.

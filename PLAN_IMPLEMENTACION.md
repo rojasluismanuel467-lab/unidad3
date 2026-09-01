@@ -68,7 +68,7 @@ Diseñado para maximizar paralelismo. **Un solo checkpoint duro** entre A y (B, 
 
 ### Tareas
 
-1. **EDA de las 11 columnas descartadas** (`PhoneService`, `MultipleLines`, `InternetService`, `OnlineSecurity`, `OnlineBackup`, `DeviceProtection`, `TechSupport`, `StreamingTV`, `StreamingMovies`, `PaperlessBilling`).
+1. **EDA de las 10 columnas descartadas** (`PhoneService`, `MultipleLines`, `InternetService`, `OnlineSecurity`, `OnlineBackup`, `DeviceProtection`, `TechSupport`, `StreamingTV`, `StreamingMovies`, `PaperlessBilling`).
    Para cada una:
    - Cardinalidad y distribución (`value_counts`)
    - % nulls / valores "No internet service" / "No phone service"
@@ -112,7 +112,7 @@ Guardar en el repo, en `artifacts/`:
 - Sección de notebook con celdas markdown que expliquen la selección (evidencia visible para el profesor).
 
 ### Criterios de "hecho"
-- Tabla EDA con las 11 features y sus 4 columnas de análisis.
+- Tabla EDA con las 10 features y sus columnas de análisis (cardinalidad, delta_churn, % nulls, correlación con tenure/MonthlyCharges).
 - Tabla proxy-AUC.
 - Justificación escrita de las features seleccionadas (2-3 líneas cada una).
 - Baseline numérico visible en el notebook.
