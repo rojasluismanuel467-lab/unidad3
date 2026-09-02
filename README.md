@@ -13,3 +13,18 @@ Laboratorio de análisis de sesgo en un modelo de churn (Telco), con variable pr
 
 ## Archivos
 - `u3_telco_churn_bias_analysis.ipynb` — notebook principal.
+- `parte_b_mitigacion.py` — implementación reproducible de las técnicas de la Parte B.
+- `artifacts/` — datos/modelo de la Parte A y salidas serializadas para la Parte C.
+
+## Ejecutar la Parte B
+
+Desde este directorio, usando el mismo entorno de Python que generó los
+artefactos de la Parte A:
+
+```bash
+python parte_b_mitigacion.py
+```
+
+La ejecución aplica reweighting, adversarial training con cinco semillas y
+threshold adjustment, y guarda los resultados en `artifacts/`. La exportación
+a BigQuery del notebook está desactivada por defecto.

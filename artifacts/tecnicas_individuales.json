@@ -1,0 +1,194 @@
+{
+  "reweighting": {
+    "recall": 0.7941176470588235,
+    "precision": 0.5247349823321554,
+    "dpd": 8.467502933384718e-05,
+    "eod": 0.02424641456502452,
+    "auc": 0.8403394559404789,
+    "recall_female": 0.7823834196891192,
+    "precision_female": 0.5471014492753623,
+    "recall_male": 0.8066298342541437,
+    "precision_male": 0.503448275862069,
+    "weights_by_group": [
+      {
+        "grupo": "0_0",
+        "peso": 0.6854014598540146,
+        "n": 2055
+      },
+      {
+        "grupo": "0_1",
+        "peso": 1.8880697050938338,
+        "n": 746
+      },
+      {
+        "grupo": "1_0",
+        "peso": 0.6758637236084453,
+        "n": 2084
+      },
+      {
+        "grupo": "1_1",
+        "peso": 1.8805073431241655,
+        "n": 749
+      }
+    ]
+  },
+  "adversarial": {
+    "seeds": [
+      42,
+      7,
+      123,
+      2024,
+      99
+    ],
+    "runs": [
+      {
+        "seed": 42,
+        "recall": 0.56951871657754,
+        "precision": 0.5883977900552486,
+        "dpd": 0.029815690686150004,
+        "eod": 0.02665628952232707,
+        "auc": 0.8036089798238136,
+        "recall_female": 0.5647668393782384,
+        "precision_female": 0.5828877005347594,
+        "recall_male": 0.574585635359116,
+        "precision_male": 0.5942857142857143
+      },
+      {
+        "seed": 7,
+        "recall": 0.6657754010695187,
+        "precision": 0.516597510373444,
+        "dpd": 0.02268685964509065,
+        "eod": 0.026708270117081323,
+        "auc": 0.7952517502389626,
+        "recall_female": 0.6528497409326425,
+        "precision_female": 0.5185185185185185,
+        "recall_male": 0.6795580110497238,
+        "precision_male": 0.5146443514644351
+      },
+      {
+        "seed": 123,
+        "recall": 0.0,
+        "precision": 0.0,
+        "dpd": 0.0,
+        "eod": 0.0,
+        "auc": 0.7191919191919193,
+        "recall_female": 0.0,
+        "precision_female": 0.0,
+        "recall_male": 0.0,
+        "precision_male": 0.0
+      },
+      {
+        "seed": 2024,
+        "recall": 0.5668449197860963,
+        "precision": 0.5792349726775956,
+        "dpd": 0.04984133512360536,
+        "eod": 0.04839590801260224,
+        "auc": 0.8043090754088197,
+        "recall_female": 0.5699481865284974,
+        "precision_female": 0.5612244897959183,
+        "recall_male": 0.56353591160221,
+        "precision_male": 0.6
+      },
+      {
+        "seed": 99,
+        "recall": 0.5374331550802139,
+        "precision": 0.5742857142857143,
+        "dpd": 0.018029733031728945,
+        "eod": 0.011165408188464898,
+        "auc": 0.8022837066315328,
+        "recall_female": 0.533678756476684,
+        "precision_female": 0.5819209039548022,
+        "recall_male": 0.5414364640883977,
+        "precision_male": 0.5664739884393064
+      }
+    ],
+    "best_seed": 123,
+    "best": {
+      "seed": 123,
+      "recall": 0.0,
+      "precision": 0.0,
+      "dpd": 0.0,
+      "eod": 0.0,
+      "auc": 0.7191919191919193,
+      "recall_female": 0.0,
+      "precision_female": 0.0,
+      "recall_male": 0.0,
+      "precision_male": 0.0
+    },
+    "recall_mean": 0.46791443850267384,
+    "recall_std": 0.26600582872928913,
+    "precision_mean": 0.4517031974784006,
+    "precision_std": 0.25407837826660623,
+    "auc_mean": 0.7849290862590096,
+    "auc_std": 0.03692437466282647,
+    "dpd_mean": 0.024074723697314993,
+    "dpd_std": 0.018131032556344313,
+    "eod_mean": 0.022585175168095106,
+    "eod_std": 0.018304842455322448
+  },
+  "threshold": {
+    "recall": 0.7967914438502673,
+    "precision": 0.5209790209790209,
+    "dpd": 0.00029636260266846515,
+    "eod": 0.029771276443477546,
+    "auc": 0.8403743315508022,
+    "recall_female": 0.7823834196891192,
+    "precision_female": 0.5412186379928315,
+    "recall_male": 0.8121546961325967,
+    "precision_male": 0.5017064846416383,
+    "auc_note": "AUC de las probabilidades del modelo base",
+    "thresholds_by_group": {
+      "0": {
+        "p0": 0.01044444444444507,
+        "p1": 0.989555555555555,
+        "operations": [
+          {
+            "operation": "operation0",
+            "threshold": 0.2940092533826828,
+            "description": "[>0.2940092533826828]"
+          },
+          {
+            "operation": "operation1",
+            "threshold": 0.2674192637205124,
+            "description": "[>0.2674192637205124]"
+          }
+        ],
+        "raw": "{'p_ignore': np.float64(0.0), 'prediction_constant': np.float64(0.246), 'p0': 0.01044444444444507, 'operation0': [>0.2940092533826828], 'p1': 0.989555555555555, 'operation1': [>0.2674192637205124]}"
+      },
+      "1": {
+        "p0": 0.46620289855072483,
+        "p1": 0.5337971014492752,
+        "operations": [
+          {
+            "operation": "operation0",
+            "threshold": 0.30811215937137604,
+            "description": "[>0.30811215937137604]"
+          },
+          {
+            "operation": "operation1",
+            "threshold": 0.24296630918979645,
+            "description": "[>0.24296630918979645]"
+          }
+        ],
+        "raw": "{'p_ignore': np.float64(0.015086831519169959), 'prediction_constant': np.float64(0.246), 'p0': 0.46620289855072483, 'operation0': [>0.30811215937137604], 'p1': 0.5337971014492752, 'operation1': [>0.24296630918979645]}"
+      }
+    }
+  },
+  "metadata": {
+    "protected_attribute": "gender",
+    "gender_encoding": {
+      "0": "Female",
+      "1": "Male"
+    },
+    "adversarial_seeds": [
+      42,
+      7,
+      123,
+      2024,
+      99
+    ],
+    "lambda": 1.0,
+    "epochs": 50,
+    "learning_rate": 0.001
+  }
+}
