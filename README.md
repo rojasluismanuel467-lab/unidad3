@@ -1,7 +1,8 @@
 # Unidad 3 — IA en la Nube
 
-Laboratorio de análisis de sesgo en un modelo de churn (Telco), con variable protegida **gender**
-(adicional a `SeniorCitizen`, no la reemplaza).
+Laboratorio de análisis de sesgo en un modelo de churn (Telco), con **`gender` como única variable protegida**.
+
+> Nota: por instrucción del profesor, `SeniorCitizen` fue removido por completo del modelo (ni como protegida ni como feature).
 
 ## Alcance
 - Ampliación justificada de features del dataset crudo.

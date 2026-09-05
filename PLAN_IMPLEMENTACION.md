@@ -8,7 +8,9 @@
 
 ## Contexto del entregable
 
-El PM pidió que el modelo de churn se audite y mitigue **para género** (adicional a `SeniorCitizen`, no reemplazo), amplíe features del dataset crudo con criterio, aplique reweighting + adversarial + threshold por separado y combinadas, y que le respondamos con números si mejoró la equidad, cuánto costó en AUC/recall, y si combinar valió la pena.
+El PM pidió que el modelo de churn se audite y mitigue **para género**, amplíe features del dataset crudo con criterio, aplique reweighting + adversarial + threshold por separado y combinadas, y que le respondamos con números si mejoró la equidad, cuánto costó en AUC/recall, y si combinar valió la pena.
+
+> **Cambio de scope (instrucción del profesor)**: `SeniorCitizen` se remueve **completamente** del modelo — ni como variable protegida ni como feature. `gender` queda como la **única** variable protegida y el modelo se reentrena sin `SeniorCitizen` en `columnas_hoy`.
 
 ## Requisitos mínimos para aprobar la unidad
 
@@ -26,10 +28,10 @@ Del enunciado, ponderación 100%:
 **Constraints obligatorios (no negociables):**
 - No agregar todas las columnas "porque sí" — cada feature con justificación.
 - Mantener `train_test_split(stratify=y, random_state=42)` para comparabilidad.
-- `gender` es variable protegida **adicional** a `SeniorCitizen`.
+- `gender` es la **única** variable protegida. `SeniorCitizen` fue removido por completo del modelo (feature y protegida).
 
 **Troubleshooting explícito del enunciado:**
-- `compute_sample_weight` debe cruzar `gender × Churn`, no `SeniorCitizen × Churn`.
+- `compute_sample_weight` cruza `gender × Churn` (única variable protegida).
 - Encoding numérico de `gender` antes de Fairlearn / red adversaria.
 - Explicitar sobre qué datos entrena la 2ª técnica de la combinación.
 
@@ -44,7 +46,9 @@ Estos NO valen puntos extra por sí solos, pero blindan la respuesta al PM y evi
 5. **Model Card** breve al final del notebook (Mitchell et al. 2019, exigido implícitamente por EU AI Act Art. 11).
 6. **Documentar limitación**: `gender` viene binario Male/Female en este dataset; no hay categoría "no declarado".
 
-## Estado actual del notebook (baseline heredado, sobre `SeniorCitizen`)
+## Estado histórico del notebook (baseline heredado, sobre `SeniorCitizen`)
+
+> **Ya no aplica**. Se conserva como referencia; el modelo actual no usa `SeniorCitizen`.
 
 | Config | AUC | Recall (Churn) | Precision | DPD | EOD |
 |---|---|---|---|---|---|
@@ -52,7 +56,7 @@ Estos NO valen puntos extra por sí solos, pero blindan la respuesta al PM y evi
 | Reweighting | 0.823 | 0.770 | 0.510 | 0.135 | 0.081 |
 | Adversarial | 0.789 | 0.599 | 0.580 | 0.070 | 0.040 |
 
-Estos números son sobre `SeniorCitizen`. **Todos deben recalcularse sobre `gender`** con features ampliadas.
+Estos números son sobre `SeniorCitizen` con features viejas. **Ya no son referencia válida**: el modelo actual no incluye `SeniorCitizen` y agrega 3 features nuevas (InternetService, OnlineSecurity, TechSupport).
 
 ---
 
@@ -101,7 +105,7 @@ Diseñado para maximizar paralelismo. **Un solo checkpoint duro** entre A y (B, 
 
 5. **Reentrenar modelo base** con features ampliadas: mismo `XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42)`. Mismo `train_test_split(test_size=0.2, random_state=42, stratify=y)`.
 
-6. **Fairness baseline sobre `gender`** — calcular DPD, EOD y métricas desagregadas (recall, precision por Male/Female) del modelo base ampliado, ANTES de cualquier mitigación. Comparar contra el baseline heredado (features viejas + SeniorCitizen) para saber cuánta señal aportan las nuevas features.
+6. **Fairness baseline sobre `gender`** — calcular DPD, EOD y métricas desagregadas (recall, precision por Male/Female) del modelo base ampliado, ANTES de cualquier mitigación. `gender` es la única variable protegida auditada.
 
 ### Entregables (contrato para B y C)
 
@@ -137,7 +141,7 @@ Guardar en el repo, en `artifacts/`:
    **Chequeo obligatorio**: imprimir los pesos únicos y verificar que las 4 celdas (Male/Female × Churn/No-Churn) reciben pesos distintos.
 
 2. **Técnica 2 — Adversarial Training** (in-processing):
-   Adaptar el bloque PyTorch existente. Cambiar `s_train_t` de `SeniorCitizen` a `gender_Male` (0/1). Predictor + Adversario con la misma arquitectura.
+   Predictor + Adversario en PyTorch. `s_train_t = gender_Male` (0/1) — única variable protegida.
    **Extra crítico (research-based)**: correr **5 seeds** (42, 7, 123, 2024, 99), guardar la mejor por EOD y reportar media±std de las 5 en (AUC, recall, EOD). Sin esto no es reproducible (Zhang et al.).
    Hiperparámetros: `LAMBDA=1.0`, `EPOCHS=50`, `lr=0.001` (mantener consistencia con lo aprendido en clase).
 
@@ -286,7 +290,8 @@ Parte C            ████████████████████�
 
 - [ ] Notebook corre end-to-end sin excepciones desde una VM limpia
 - [ ] `train_test_split(stratify=y, random_state=42)` es idéntico en las 5 configs
-- [ ] `gender` es adicional a `SeniorCitizen` (no reemplazo) — ambos siguen como features
+- [ ] `SeniorCitizen` está removido completamente del modelo (no en `columnas_hoy`)
+- [ ] `gender` es la **única** variable protegida auditada
 - [ ] `compute_sample_weight` usa `gender × Churn`, verificado imprimiendo los 4 pesos únicos
 - [ ] Encoding numérico de `gender` (0/1) confirmado antes de pasar a NN
 - [ ] Documentado explícitamente qué datos entrena cada técnica en la combinación
