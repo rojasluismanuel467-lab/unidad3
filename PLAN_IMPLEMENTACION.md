@@ -1,7 +1,7 @@
 # Plan de Implementación — Unidad 3, Auditoría de Sesgo por `gender`
 
 **Repo**: `rojasluismanuel467-lab/unidad3` (privado)
-**Notebook base**: `u3_telco_churn_bias_analysis.ipynb`
+**Notebook base**: `u3-g02-nb-20260905.ipynb`
 **Objetivo**: responder la solicitud del PM del proyecto de retención con evidencia numérica.
 
 ---
@@ -235,7 +235,7 @@ Guardar en el repo, en `artifacts/`:
 
 ### Entregables
 
-- Notebook `u3_telco_churn_bias_analysis.ipynb` completo y ejecutable end-to-end.
+- Notebook `u3-g02-nb-20260905.ipynb` completo y ejecutable end-to-end.
 - Sección "Model Card" y sección "Respuesta al PM" visibles.
 - Repo actualizado en GitHub.
 - `RESULTADOS.md` en el root del repo con la tabla + respuesta al PM (fuera del notebook, para que legal/PM pueda leer sin abrir Jupyter).
