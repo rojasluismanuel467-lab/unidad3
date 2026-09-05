@@ -1,4 +1,4 @@
-# RESULTADOS — Auditoría de sesgo por `gender`
+# RESULTADOS -- Auditoria de sesgo por `gender`
 
 ## Tabla comparativa
 
@@ -10,8 +10,8 @@
 | Threshold adjustment | 0.799 | 0.525 | 0.84 | 0.003 | 0.035 |
 | Combinado (rw→adv→thr) | 0.73 | 0.465 | 0.815 | 0.02 | 0.095 |
 
-- DPD/EOD: más cerca de 0 = más equitativo.
-- Adversarial reporta media±std sobre 5 seeds (Zhang et al. 2018).
+- DPD/EOD: mas cerca de 0 = mas equitativo.
+- Adversarial reporta media +- std sobre 5 seeds (Zhang et al. 2018).
 - AUC del combinado corresponde al predictor adversarial subyacente (el ThresholdOptimizer no expone probas comparables).
 
 ## Respuesta al PM

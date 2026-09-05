@@ -1,0 +1,21 @@
+# Pre-commit hook: mantiene RESULTADOS.md y MODEL_CARD.md sincronizados con
+# las metricas actuales en artifacts/. Solo re-renderiza (no reentrena).
+#
+# Setup una sola vez:
+#   pip install pre-commit
+#   pre-commit install
+#
+# A partir de ahi, cada `git commit` corre el hook automaticamente.
+# Si los docs cambian, git aborta el commit y pide que los agregues:
+#   git add RESULTADOS.md MODEL_CARD.md && git commit
+repos:
+  - repo: local
+    hooks:
+      - id: regenerate-docs
+        name: Re-renderiza RESULTADOS.md y MODEL_CARD.md desde artifacts/*.json
+        entry: python3 regenerate_docs.py
+        language: system
+        # Corre solo cuando cambian los archivos que pueden afectar los docs
+        files: '(artifacts/.*\.json|parte_c_combinacion\.py|regenerate_docs\.py)$'
+        pass_filenames: false
+        always_run: false

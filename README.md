@@ -33,3 +33,33 @@ python parte_c_combinacion.py
 ```
 
 La exportación a BigQuery al final del notebook está desactivada por defecto (`RUN_GCP_EXPORT = False`).
+
+## Auto-generación de documentación
+
+`RESULTADOS.md` y `MODEL_CARD.md` se re-renderizan automáticamente desde
+`artifacts/*.json` mediante un pre-commit hook. Nunca quedan desincronizados
+con las métricas actuales.
+
+**Setup una sola vez** (cada miembro del equipo, tras clonar):
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+De ahí en adelante, cada `git commit` que toque `artifacts/*.json`,
+`parte_c_combinacion.py` o `regenerate_docs.py` re-renderiza los docs.
+Si cambian, el commit se aborta y pide agregarlos:
+
+```bash
+git add RESULTADOS.md MODEL_CARD.md && git commit
+```
+
+**Regenerar manualmente**:
+
+```bash
+python regenerate_docs.py
+```
+
+El script solo re-renderiza (no reentrena). Si faltan JSONs porque nunca se
+corrió Parte B/C, avisa y sale sin bloquear.
