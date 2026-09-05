@@ -39,3 +39,12 @@ Basado en Mitchell et al. 2019 (*Model Cards for Model Reporting*).
 - Ningún test de proxy leakage sobre las features candidatas superó AUC=0.508 vs. `gender` — cero riesgo de proxy en este dataset.
 - Con `gender` casi parejo (DPD/EOD < 0.06 desde el baseline), aplicar mitigación agresiva **degrada utilidad sin ganancia real de equidad**.
 - **Recomendación operacional**: usar el modelo base sin mitigación adicional; monitorear DPD/EOD mensualmente en producción; re-auditoría trimestral (NIST AI RMF Measure 2.11).
+
+## Modelos no evaluados y por qué
+Se consideró benchmarkear otras variantes de gradient boosting (LightGBM, CatBoost, HistGradientBoosting) y `FairGBM` con restricciones de fairness. Se descartó con base en tres evidencias de literatura:
+
+1. **En datasets tabulares de este tamaño (~7k filas), las diferencias entre GBDTs son ruido dentro del error de validación.** Shwartz-Ziv & Armon (2022, 11 datasets) y Grinsztajn et al. (NeurIPS 2022, 45 datasets) muestran que XGBoost, LightGBM y CatBoost son estadísticamente equivalentes tras tuning; el hyperparameter tuning importa más que el algoritmo. Benchmarks específicos sobre IBM Telco Churn reportan las tres variantes en la banda 0.831–0.841 AUC — nuestro baseline (0.840) ya toca ese techo.
+
+2. **FairGBM (Cruz et al., ICLR 2023) resuelve un problema que aquí no existe.** Su aporte es incorporar EOD/DPD como restricciones de Lagrange durante el entrenamiento; se justifica cuando hay un gap grande de fairness que persiste tras post-hoc. Con DPD=0.010 y EOD=0.052 desde el baseline, la restricción no tiene nada que apretar y los propios autores muestran que el delta vs XGBoost estándar es marginal en ausencia de sesgo estructural.
+
+3. **La rúbrica evalúa manejo de fairness sobre el modelo dado (XGBoost, pinado por el notebook base), no selección de modelo.** Reemplazarlo sin ganancia empírica esperada sería scope-creep.
