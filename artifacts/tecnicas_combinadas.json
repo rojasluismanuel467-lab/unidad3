@@ -1,0 +1,15 @@
+{
+  "recall": 0.7299465240641712,
+  "precision": 0.46507666098807493,
+  "dpd": 0.020479260666029564,
+  "eod": 0.09506770102768158,
+  "auc": 0.8150275129814771,
+  "recall_female": 0.6839378238341969,
+  "precision_female": 0.4731182795698925,
+  "recall_male": 0.7790055248618785,
+  "precision_male": 0.4577922077922078,
+  "auc_adversarial_underlying": 0.8150275129814771,
+  "orden": "reweighting -> adversarial(weighted) -> threshold",
+  "decision_dataset_2a_tecnica": "El adversarial se entreno SOBRE los datos ya reponderados: el BCE del predictor se multiplica por los sample_weights (gender x Churn). Esto responde el troubleshooting del PM.",
+  "seed": 42
+}

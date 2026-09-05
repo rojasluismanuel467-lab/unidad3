@@ -1,0 +1,42 @@
+[
+  {
+    "config": "Base (sin mitigar)",
+    "recall": 0.519,
+    "precision": 0.664,
+    "auc": 0.84,
+    "dpd_gender": 0.01,
+    "eod_gender": 0.052
+  },
+  {
+    "config": "Reweighting",
+    "recall": 0.794,
+    "precision": 0.514,
+    "auc": 0.839,
+    "dpd_gender": 0.014,
+    "eod_gender": 0.035
+  },
+  {
+    "config": "Adversarial (media\u00b1std, 5 seeds)",
+    "recall": "0.530 \u00b1 0.025",
+    "precision": "0.609 \u00b1 0.034",
+    "auc": "0.806 \u00b1 0.006",
+    "dpd_gender": "0.048 \u00b1 0.019",
+    "eod_gender": "0.042 \u00b1 0.019"
+  },
+  {
+    "config": "Threshold adjustment",
+    "recall": 0.799,
+    "precision": 0.525,
+    "auc": 0.84,
+    "dpd_gender": 0.003,
+    "eod_gender": 0.035
+  },
+  {
+    "config": "Combinado (rw\u2192adv\u2192thr)",
+    "recall": 0.73,
+    "precision": 0.465,
+    "auc": 0.815,
+    "dpd_gender": 0.02,
+    "eod_gender": 0.095
+  }
+]
