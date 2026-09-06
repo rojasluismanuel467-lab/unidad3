@@ -276,28 +276,22 @@ def table_to_markdown(rows: list[dict]) -> str:
 # Respuesta al PM (<=200 palabras)
 # ============================================================================
 def build_pm_response(baseline: dict, tecnicas_ind: dict, combined: dict) -> str:
+    rw = tecnicas_ind["reweighting"]
     adv = tecnicas_ind["adversarial"]
+    thr = tecnicas_ind["threshold"]
     adv_eod = float(adv["eod_mean"])
     adv_auc = float(adv["auc_mean"])
-    eod_change = adv_eod - float(baseline["eod_gender"])
-    auc_change = adv_auc - float(baseline["auc"])
-    adversarial_assessment = (
-        "La opción adversarial redujo una de las brechas entre géneros, "
-        "pero perdió capacidad para identificar churn."
-        if eod_change < 0 and auc_change < 0
-        else "La opción adversarial no ofreció una mejora consistente frente al modelo actual."
-    )
     txt = f"""**Asunto: Resultados de la auditoría de género — modelo de churn**
 
 Hola,
 
-Terminamos la auditoría del modelo de churn usando `gender` como único atributo protegido. Primero medimos el modelo actual; después probamos reweighting, entrenamiento adversarial, ajuste de decisión y una combinación de las tres alternativas.
+Terminamos la auditoría del modelo de churn usando `gender` como único atributo protegido. Primero medimos el modelo actual y luego probamos reweighting, entrenamiento adversarial, ajuste de decisión y su combinación.
 
-El modelo actual ya cumple el criterio interno de equidad acordado para esta auditoría. Algunas alternativas aumentan la detección de clientes en riesgo, pero también reducen la precisión o añaden complejidad. {adversarial_assessment}
+`gender` ya presentaba poca disparidad en el modelo actual (DPD={baseline['dpd_gender']:.3f}; EOD={baseline['eod_gender']:.3f}). Reweighting redujo EOD a {rw['eod']:.3f}, mantuvo AUC en {rw['auc']:.3f} y elevó recall de {baseline['recall']:.3f} a {rw['recall']:.3f}. El ajuste de decisión logró DPD={thr['dpd']:.3f}, EOD={thr['eod']:.3f} y recall={thr['recall']:.3f}; su AUC de referencia se mantuvo en {thr['auc']:.3f}.
 
-La combinación completa tampoco dio una mejora consistente. Recomendamos conservar el modelo actual y monitorearlo mensualmente; si el negocio prioriza captar más clientes en riesgo y puede asumir más contactos innecesarios, podemos evaluar el ajuste de decisión como alternativa operativa.
+Adversarial redujo EOD a {adv_eod:.3f}, pero AUC cayó de {baseline['auc']:.3f} a {adv_auc:.3f} y recall quedó en {adv['recall_mean']:.3f}. Combinar técnicas no valió la pena: EOD subió a {combined['eod']:.3f} y AUC fue {combined['auc_adversarial_underlying']:.3f}, aunque recall llegó a {combined['recall']:.3f}.
 
-Si recibimos una auditoría, podremos responder con evidencia reproducible: versión del modelo y datos, tamaño y fecha de la muestra, tasas de acierto y error, resultados separados por género, brechas entre grupos, comparación de las alternativas evaluadas y la decisión tomada. Conservaremos estos resultados para respaldar cada cifra.
+Recomendamos conservar el modelo actual y monitorearlo mensualmente. Si el negocio prioriza captar más clientes en riesgo y puede asumir más contactos innecesarios, el ajuste de decisión es la alternativa a evaluar. Para una auditoría conservamos versión, datos, errores por género y comparación de modelos.
 
 Quedo atento a cualquier pregunta.
 """
