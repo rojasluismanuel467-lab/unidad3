@@ -64,7 +64,7 @@ Estos números son sobre `SeniorCitizen` con features viejas. **Ya no son refere
 
 Diseñado para maximizar paralelismo. **Un solo checkpoint duro** entre A y (B, C).
 
-## Parte A — Datos, Features y Modelo Base ampliado (Compañero 1)
+## Datos, Features y Modelo Base ampliado
 
 **Ponderación cubierta**: 30% (Item 1 + Item 2)
 **Duración estimada**: 40% del esfuerzo total. Es la parte más de EDA/pensamiento.
@@ -123,11 +123,11 @@ Guardar en el repo, en `artifacts/`:
 
 ---
 
-## Parte B — Técnicas Individuales de Mitigación sobre `gender` (Compañero 2)
+## Técnicas Individuales de Mitigación sobre `gender`
 
 **Ponderación cubierta**: 20% (Item 3)
 **Duración estimada**: 30% del esfuerzo.
-**Dependencias**: Parte A completada (necesita los pickles y el modelo base).
+**Dependencias**: modelo base completado (necesita los pickles y el modelo base).
 
 ### Tareas
 
@@ -184,11 +184,11 @@ Guardar en el repo, en `artifacts/`:
 
 ---
 
-## Parte C — Combinación, Tabla, Model Card y Respuesta al PM (Compañero 3)
+## Combinación, Tabla, Model Card y Respuesta al PM
 
 **Ponderación cubierta**: 50% (Item 4 + 5 + 6)
 **Duración estimada**: 30% del esfuerzo.
-**Dependencias**: Parte B completada. **Puede empezar en paralelo con B** en el setup (funciones de métricas, plantilla de tabla, borrador de Model Card).
+**Dependencias**: técnicas individuales completadas. El setup de funciones de métricas, plantilla de tabla y borrador de Model Card puede prepararse en paralelo.
 
 ### Tareas
 
@@ -253,11 +253,11 @@ Guardar en el repo, en `artifacts/`:
 ```
 Tiempo →
 
-Parte A ██████████████████████
+Modelo base ██████████████████████
                               ↓ (checkpoint: pickles + baseline)
-Parte B                       ██████████████████
+Mitigación individual         ██████████████████
                               ↓ (checkpoint: JSON con métricas)
-Parte C            ████████████████████████████████
+Combinación         ████████████████████████████████
                    ↑ (arranca en paralelo: setup, plantilla, Model Card)
 ```
 

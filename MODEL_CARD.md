@@ -5,7 +5,7 @@ Basado en Mitchell et al. 2019 (*Model Cards for Model Reporting*).
 ## Model details
 - **Algoritmo**: XGBoost Classifier (`n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42`).
 - **Features**: 16 columnas tras one-hot (`gender`, `Partner`, `Dependents`, `tenure`, `Contract`, `PaymentMethod`, `MonthlyCharges`, `InternetService`, `OnlineSecurity`, `TechSupport`).
-- **Variable protegida auditada**: `gender` (binaria Male/Female en el dataset). `SeniorCitizen` fue removido por instrucción académica.
+- **Variable protegida auditada**: `gender` (binaria Male/Female en el dataset). Es el único atributo protegido considerado en esta auditoría.
 - **Versión**: iteración de U3 — 2026.
 
 ## Intended use
@@ -37,7 +37,7 @@ Basado en Mitchell et al. 2019 (*Model Cards for Model Reporting*).
 
 ## Caveats and recommendations
 - Ningún test de proxy leakage sobre las features candidatas superó AUC=0.508 vs. `gender` — cero riesgo de proxy en este dataset.
-- Con `gender` casi parejo (DPD/EOD < 0.06 desde el baseline), aplicar mitigación agresiva **degrada utilidad sin ganancia real de equidad**.
+- El baseline y las configuraciones se evalúan con el criterio ≤ 0.20 definido por la profesora para este taller; no es una regla universal de Fairlearn.
 - **Recomendación operacional**: usar el modelo base sin mitigación adicional; monitorear DPD/EOD mensualmente en producción; re-auditoría trimestral (NIST AI RMF Measure 2.11).
 
 ## Modelos no evaluados y por qué

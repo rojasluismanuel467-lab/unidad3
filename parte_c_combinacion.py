@@ -1,12 +1,12 @@
-"""Parte C — Combinacion en cascada (reweighting -> adversarial -> threshold),
-tabla comparativa 5 configs, Model Card y respuesta al PM.
+"""Combinación en cascada (reweighting -> adversarial -> threshold),
+tabla comparativa de cinco configuraciones, Model Card y respuesta al PM.
 
 Orden y justificacion:
 1) Reweighting (pre): calcula sample_weights = balanced(gender x Churn).
    Corrige el sesgo estructural de los datos antes del entrenamiento.
 2) Adversarial (in-processing) entrenado SOBRE los datos ya reponderados:
    el BCELoss del predictor se pondera con sample_weights, el adversario
-   trata de recuperar gender desde la salida como en Parte B.
+   trata de recuperar gender desde la salida.
    -> Responde al troubleshooting del PM: la 2a tecnica entrena sobre los
       datos re-ponderados, no sobre los originales. Decision explicita.
 3) Threshold (post): ThresholdOptimizer se ajusta sobre las probabilidades
@@ -42,6 +42,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 
 from parte_b_mitigacion import (
     EPOCHS,
+    FAIRNESS_THRESHOLD,
     LAMBDA,
     SEEDS,
     _build_adversarial_models,
@@ -163,7 +164,7 @@ def run_combined(
     y_train, y_test = data["y_train"], data["y_test"]
     g_train, g_test = data["gender_train"], data["gender_test"]
 
-    # ---- Paso 1: Reweighting (mismo criterio que Parte B) ----
+    # ---- Paso 1: Reweighting (mismo criterio de ponderación) ----
     grupo = g_train.astype(str) + "_" + y_train.astype(str)
     sample_weights = compute_sample_weight(class_weight="balanced", y=grupo)
 
@@ -213,14 +214,26 @@ def build_comparative_table(
     tecnicas_ind: dict,
     combined: dict,
 ) -> list[dict]:
+    def fairness_status(dpd, eod):
+        """Evalúa el criterio docente sin presentarlo como regla universal."""
+        return (
+            "Sí"
+            if abs(float(dpd)) <= FAIRNESS_THRESHOLD
+            and abs(float(eod)) <= FAIRNESS_THRESHOLD
+            else "No"
+        )
+
     def row(nombre, m, extra=""):
+        dpd = m.get("dpd", m.get("dpd_gender", float("nan")))
+        eod = m.get("eod", m.get("eod_gender", float("nan")))
         return {
             "config": nombre + (f" ({extra})" if extra else ""),
             "recall": round(m["recall"], 3),
             "precision": round(m["precision"], 3),
             "auc": round(m.get("auc", m.get("auc_adversarial_underlying", float("nan"))), 3),
-            "dpd_gender": round(m.get("dpd", m.get("dpd_gender", float("nan"))), 3),
-            "eod_gender": round(m.get("eod", m.get("eod_gender", float("nan"))), 3),
+            "dpd_gender": round(dpd, 3),
+            "eod_gender": round(eod, 3),
+            "criterio_profesora": fairness_status(dpd, eod),
         }
 
     rows = []
@@ -241,6 +254,7 @@ def build_comparative_table(
         "auc": f"{a_m:.3f} ± {a_s:.3f}",
         "dpd_gender": f"{d_m:.3f} ± {d_s:.3f}",
         "eod_gender": f"{e_m:.3f} ± {e_s:.3f}",
+        "criterio_profesora": fairness_status(d_m, e_m),
     })
     rows.append(row("Threshold adjustment", tecnicas_ind["threshold"]))
     rows.append(row("Combinado (rw→adv→thr)", combined))
@@ -248,12 +262,12 @@ def build_comparative_table(
 
 
 def table_to_markdown(rows: list[dict]) -> str:
-    header = "| Config | Recall (Churn) | Precision | AUC | DPD (gender) | EOD (gender) |"
-    sep = "|---|---|---|---|---|---|"
+    header = "| Config | Recall (Churn) | Precision | AUC | DPD (gender) | EOD (gender) | Cumple criterio profesora (≤ 0.20) |"
+    sep = "|---|---|---|---|---|---|---|"
     lines = [header, sep]
     for r in rows:
         lines.append(
-            f"| {r['config']} | {r['recall']} | {r['precision']} | {r['auc']} | {r['dpd_gender']} | {r['eod_gender']} |"
+            f"| {r['config']} | {r['recall']} | {r['precision']} | {r['auc']} | {r['dpd_gender']} | {r['eod_gender']} | {r['criterio_profesora']} |"
         )
     return "\n".join(lines)
 
@@ -262,21 +276,30 @@ def table_to_markdown(rows: list[dict]) -> str:
 # Respuesta al PM (<=200 palabras)
 # ============================================================================
 def build_pm_response(baseline: dict, tecnicas_ind: dict, combined: dict) -> str:
-    rw = tecnicas_ind["reweighting"]
-    thr = tecnicas_ind["threshold"]
-    txt = f"""**Asunto: Auditoría de sesgo por género — modelo de churn**
+    adv = tecnicas_ind["adversarial"]
+    adv_eod = float(adv["eod_mean"])
+    adv_auc = float(adv["auc_mean"])
+    eod_change = adv_eod - float(baseline["eod_gender"])
+    auc_change = adv_auc - float(baseline["auc"])
+    adversarial_assessment = (
+        "La opción adversarial redujo una de las brechas entre géneros, "
+        "pero perdió capacidad para identificar churn."
+        if eod_change < 0 and auc_change < 0
+        else "La opción adversarial no ofreció una mejora consistente frente al modelo actual."
+    )
+    txt = f"""**Asunto: Resultados de la auditoría de género — modelo de churn**
 
 Hola,
 
-Auditamos el modelo con `gender` como variable protegida y aplicamos las tres técnicas por separado y combinadas.
+Terminamos la auditoría del modelo de churn usando `gender` como único atributo protegido. Primero medimos el modelo actual; después probamos reweighting, entrenamiento adversarial, ajuste de decisión y una combinación de las tres alternativas.
 
-**Gender ya estaba parejo desde el modelo base.** DPD={baseline['dpd_gender']:.3f}, EOD={baseline['eod_gender']:.3f} — ambos muy por debajo del umbral de 0.10 que Fairlearn considera aceptable. Tu intuición era correcta: no hay un problema visible de discriminación de género que necesite mitigarse.
+El modelo actual ya cumple el criterio interno de equidad acordado para esta auditoría. Algunas alternativas aumentan la detección de clientes en riesgo, pero también reducen la precisión o añaden complejidad. {adversarial_assessment}
 
-**Qué pasó al aplicar las técnicas de todos modos** (como pediste). Reweighting subió recall de {baseline['recall']:.2f} a {rw['recall']:.2f} y mantuvo AUC intacto ({rw['auc']:.3f} vs {baseline['auc']:.3f}), a costa de precisión ({baseline['precision']:.2f}→{rw['precision']:.2f}). Threshold-adjustment bajó DPD a {thr['dpd']:.3f} con recall={thr['recall']:.2f}, pero ojo — legalmente usa umbrales distintos por género (posible *disparate treatment*, revisar con legal). Adversarial degradó AUC ~4 puntos sin ganancia clara.
+La combinación completa tampoco dio una mejora consistente. Recomendamos conservar el modelo actual y monitorearlo mensualmente; si el negocio prioriza captar más clientes en riesgo y puede asumir más contactos innecesarios, podemos evaluar el ajuste de decisión como alternativa operativa.
 
-**Combinar (reweighting→adversarial→threshold) no valió la pena:** recall={combined['recall']:.2f}, DPD={combined['dpd']:.3f}, EOD={combined['eod']:.3f}. Añade complejidad sin mejora consistente sobre reweighting solo.
+Si recibimos una auditoría, podremos responder con evidencia reproducible: versión del modelo y datos, tamaño y fecha de la muestra, tasas de acierto y error, resultados separados por género, brechas entre grupos, comparación de las alternativas evaluadas y la decisión tomada. Conservaremos estos resultados para respaldar cada cifra.
 
-**Recomendación:** no aplicar mitigación adicional sobre género en producción. Monitorear DPD/EOD mensualmente. El sesgo real observable estaba en SeniorCitizen (removido esta iteración por instrucción académica) — vale la pena revisarlo si vuelve al alcance.
+Quedo atento a cualquier pregunta.
 """
     return txt.strip()
 
@@ -292,7 +315,7 @@ Basado en Mitchell et al. 2019 (*Model Cards for Model Reporting*).
 ## Model details
 - **Algoritmo**: XGBoost Classifier (`n_estimators=100, max_depth=4, learning_rate=0.1, random_state=42`).
 - **Features**: {n_features} columnas tras one-hot (`gender`, `Partner`, `Dependents`, `tenure`, `Contract`, `PaymentMethod`, `MonthlyCharges`, `InternetService`, `OnlineSecurity`, `TechSupport`).
-- **Variable protegida auditada**: `gender` (binaria Male/Female en el dataset). `SeniorCitizen` fue removido por instrucción académica.
+- **Variable protegida auditada**: `gender` (binaria Male/Female en el dataset). Es el único atributo protegido considerado en esta auditoría.
 - **Versión**: iteración de U3 — 2026.
 
 ## Intended use
@@ -324,7 +347,7 @@ Basado en Mitchell et al. 2019 (*Model Cards for Model Reporting*).
 
 ## Caveats and recommendations
 - Ningún test de proxy leakage sobre las features candidatas superó AUC=0.508 vs. `gender` — cero riesgo de proxy en este dataset.
-- Con `gender` casi parejo (DPD/EOD < 0.06 desde el baseline), aplicar mitigación agresiva **degrada utilidad sin ganancia real de equidad**.
+- El baseline y las configuraciones se evalúan con el criterio ≤ {FAIRNESS_THRESHOLD:.2f} definido por la profesora para este taller; no es una regla universal de Fairlearn.
 - **Recomendación operacional**: usar el modelo base sin mitigación adicional; monitorear DPD/EOD mensualmente en producción; re-auditoría trimestral (NIST AI RMF Measure 2.11).
 
 ## Modelos no evaluados y por qué
@@ -368,7 +391,7 @@ def main():
     with open(a / "tecnicas_individuales.json") as f:
         tecnicas_ind = json.load(f)
 
-    print("=== Parte C: entrenando combinacion (rw -> adv -> thr) ===")
+    print("=== Entrenando combinación (rw -> adv -> thr) ===")
     combined = run_combined(data, seed=args.seed, artifacts_dir=a)
     print(f"Combinado: recall={combined['recall']:.3f}  prec={combined['precision']:.3f}  "
           f"DPD={combined['dpd']:.3f}  EOD={combined['eod']:.3f}  "

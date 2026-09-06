@@ -1,7 +1,7 @@
-"""Implementación reproducible de la Parte B de la Unidad 3.
+"""Técnicas de mitigación reproducibles para la Unidad 3.
 
-El módulo consume únicamente los artefactos de la Parte A y escribe los
-artefactos que necesita la Parte C. No contiene ninguna operación de GCP.
+El módulo consume los artefactos del modelo base y escribe los resultados
+necesarios para la comparación final. No contiene operaciones de GCP.
 """
 
 from __future__ import annotations
@@ -30,6 +30,10 @@ SEEDS = (42, 7, 123, 2024, 99)
 LAMBDA = 1.0
 EPOCHS = 50
 LEARNING_RATE = 0.001
+# Criterio de aceptación definido por la profesora para este taller. No es un
+# umbral universal de Fairlearn: DPD/EOD se interpretan siempre junto con el
+# contexto, la métrica de utilidad y el caso de uso.
+FAIRNESS_THRESHOLD = 0.20
 
 
 def _set_seed(seed: int) -> None:
@@ -40,6 +44,9 @@ def _set_seed(seed: int) -> None:
 
     import torch
 
+    # El entrenamiento es pequeño y reproducible; un hilo evita sobrecarga y
+    # variabilidad de runtimes BLAS/OpenMP en portátiles.
+    torch.set_num_threads(1)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
@@ -52,7 +59,7 @@ def _as_aligned_series(values: Any, index: pd.Index, name: str) -> pd.Series:
 
 
 def load_artifacts(artifacts_dir: str | Path = "artifacts") -> dict[str, Any]:
-    """Carga y valida el contrato producido por la Parte A."""
+    """Carga y valida los artefactos producidos por el modelo base."""
 
     directory = Path(artifacts_dir)
     required = (
@@ -68,7 +75,7 @@ def load_artifacts(artifacts_dir: str | Path = "artifacts") -> dict[str, Any]:
     missing = [name for name in required if not (directory / name).exists()]
     if missing:
         raise FileNotFoundError(
-            "Faltan artefactos de Parte A: " + ", ".join(missing)
+            "Faltan artefactos del modelo base: " + ", ".join(missing)
         )
 
     try:
@@ -416,7 +423,7 @@ def _train_adversarial_once(
     y_train_t = torch.tensor(
         y_train.to_numpy(dtype=np.float32)
     ).reshape(-1, 1)
-    # La variable sensible de la red es gender_Male, no SeniorCitizen.
+    # La red adversaria usa exclusivamente gender_Male como variable sensible.
     gender_train_t = torch.tensor(
         gender_train.to_numpy(dtype=np.float32)
     ).reshape(-1, 1)
@@ -558,7 +565,7 @@ def save_part_b_results(
     artifacts_dir: str | Path = "artifacts",
     verbose: bool = True,
 ) -> dict[str, Any]:
-    """Guarda el JSON que consume la Parte C sin volver a entrenar modelos."""
+    """Guarda resultados para la comparación final sin reentrenar modelos."""
 
     output = {
         "reweighting": reweighting_metrics,
@@ -578,7 +585,7 @@ def save_part_b_results(
         json.dump(_json_safe(output), handle, indent=2, ensure_ascii=False)
 
     if verbose:
-        print(f"Artefactos de Parte B guardados en {output_path}")
+        print(f"Resultados de mitigación guardados en {output_path}")
     return output
 
 

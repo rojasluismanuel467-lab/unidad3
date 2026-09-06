@@ -1,8 +1,8 @@
-"""Re-renderiza RESULTADOS.md y MODEL_CARD.md desde los JSONs en artifacts/.
+"""Re-renderiza los documentos de resultados desde los JSONs en artifacts/.
 
 Diseñado para correrse desde el pre-commit hook: es rápido (solo lee JSONs y
 formatea markdown), no reentrena nada. Si faltan JSONs (p.ej. nunca se corrió
-Parte B), el script avisa y sale con codigo 0 (no bloquea el commit).
+mitigación), el script avisa y sale con codigo 0 (no bloquea el commit).
 
 Uso manual: `python regenerate_docs.py`
 """
@@ -31,7 +31,7 @@ def main() -> int:
     missing = [p for p in REQUIRED if not p.exists()]
     if missing:
         print(
-            "regenerate_docs: skip -- faltan artifacts (aun no se corrio Parte B/C):",
+            "regenerate_docs: skip -- faltan artifacts de mitigación:",
             file=sys.stderr,
         )
         for p in missing:
@@ -85,9 +85,21 @@ def main() -> int:
 {pm}
 """
 
+    entregable_pm = f"""# Auditoría de sesgo por `gender`
+
+## Tabla comparativa
+
+{md_tabla}
+
+## Correo para el PM
+
+{pm}
+"""
+
     Path("RESULTADOS.md").write_text(resultados_txt, encoding="utf-8")
     Path("MODEL_CARD.md").write_text(model_card, encoding="utf-8")
-    print(f"regenerate_docs: OK -- RESULTADOS.md y MODEL_CARD.md re-renderizados desde {ART}/")
+    Path("ENTREGABLE_PM.md").write_text(entregable_pm, encoding="utf-8")
+    print(f"regenerate_docs: OK -- documentos re-renderizados desde {ART}/")
     print(f"  (respuesta PM: {n_words} palabras, tabla: {len(tabla)} filas)")
     return 0
 

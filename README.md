@@ -14,8 +14,8 @@ Laboratorio de análisis de sesgo en un modelo de churn (Telco), con **`gender` 
 
 ## Archivos
 - `u3-g02-nb-20260905.ipynb` — notebook principal (54 celdas, ejecutable end-to-end).
-- `parte_b_mitigacion.py` — implementación reproducible de las 3 técnicas individuales (Parte B).
-- `parte_c_combinacion.py` — combinación en cascada + tabla comparativa + PM response + Model Card (Parte C).
+- `parte_b_mitigacion.py` — implementación reproducible de las 3 técnicas individuales.
+- `parte_c_combinacion.py` — combinación en cascada, tabla comparativa, correo al PM y Model Card.
 - `artifacts/` — pickles y JSON compartidos entre las 3 partes.
 - `RESULTADOS.md` — tabla comparativa + respuesta al PM (para consumir sin abrir Jupyter).
 - `MODEL_CARD.md` — Model Card estilo Mitchell et al. 2019.
@@ -24,7 +24,7 @@ Laboratorio de análisis de sesgo en un modelo de churn (Telco), con **`gender` 
 ## Ejecutar end-to-end
 
 ```bash
-# 1. Genera artifacts de Parte A (splits + baseline)
+# 1. Genera artifacts del modelo base (splits + baseline)
 #    -> hacerlo desde el notebook (Sección 4C) o correr solo esa parte
 # 2. Ejecuta las 3 técnicas individuales
 python parte_b_mitigacion.py
@@ -62,4 +62,4 @@ python regenerate_docs.py
 ```
 
 El script solo re-renderiza (no reentrena). Si faltan JSONs porque nunca se
-corrió Parte B/C, avisa y sale sin bloquear.
+corrió las técnicas de mitigación, avisa y sale sin bloquear.
