@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+import joblib
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request, status
@@ -39,7 +40,7 @@ from app.schemas import (
 # ---------------------------------------------------------------------------
 # Configuracion via env vars (Cloud Run los inyecta al desplegar)
 # ---------------------------------------------------------------------------
-MODEL_PATH_LOCAL = os.getenv("MODEL_PATH_LOCAL", "/app/model.pkl")
+MODEL_PATH_LOCAL = os.getenv("MODEL_PATH_LOCAL", "/tmp/model.joblib")
 MODEL_GCS_URI = os.getenv("MODEL_GCS_URI", "")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "u4_g02_mdl_20260914")
 
@@ -106,13 +107,23 @@ def _load_model_from_gcs(gcs_uri: str, dest: str) -> str:
 
 
 def _load_bundle() -> dict:
-    """Carga y valida el bundle del modelo (contract del pkl)."""
+    """Carga y valida el bundle del modelo (contract del pkl).
+
+    Soporta tanto joblib (formato preferido, mas robusto entre versiones de
+    Python/sklearn) como pickle plano (compat con bundles antiguos).
+    """
     path = MODEL_PATH_LOCAL
     if MODEL_GCS_URI:
         path = _load_model_from_gcs(MODEL_GCS_URI, MODEL_PATH_LOCAL)
 
-    with open(path, "rb") as f:
-        bundle = pickle.load(f)
+    try:
+        # Formato preferido: joblib maneja mejor arrays numpy grandes y es
+        # el standard de sklearn/xgboost/lightgbm.
+        bundle = joblib.load(path)
+    except Exception:
+        # Fallback a pickle plano para bundles antiguos.
+        with open(path, "rb") as f:
+            bundle = pickle.load(f)
 
     # Contract check: el bundle DEBE traer al menos estas llaves
     required = {"estimator", "threshold_optimo", "features", "arquitectura"}

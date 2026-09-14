@@ -113,7 +113,7 @@ gcloud run deploy u5-g02-cr-20260914 \
   --max-instances=1 \
   --memory=512Mi \
   --port=8080 \
-  --set-env-vars="MODEL_GCS_URI=gs://${PROJECT_ID}-u4-class-mdl-20260914/u4_g02_mdl_20260914/model.pkl,MODEL_VERSION=u4_g02_mdl_20260914"
+  --set-env-vars="MODEL_GCS_URI=gs://${PROJECT_ID}-u4-class-mdl-20260914/u4_g02_mdl_20260914/model.joblib,MODEL_VERSION=u4_g02_mdl_20260914"
 ```
 
 **Guarda la `Service URL`** que devuelve — la vas a necesitar en todos los pasos siguientes.
