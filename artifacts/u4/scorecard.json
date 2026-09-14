@@ -1,0 +1,107 @@
+{
+  "ganador": "mlp",
+  "runner_up": "xgboost",
+  "costo_config": {
+    "c_FN": 1200.0,
+    "c_FP": 100.0
+  },
+  "scorecard": [
+    {
+      "arquitectura": "xgboost",
+      "threshold": 0.08,
+      "auc": 0.8441060218553824,
+      "recall": 0.9679144385026738,
+      "precision": 0.37512953367875645,
+      "dpd_gender": 0.004302297919010378,
+      "eod_gender": 0.018622733429621285,
+      "costo_total_usd": 74700.0,
+      "costo_por_cliente_usd": 53.016323633782825,
+      "fn": 12,
+      "fp": 603,
+      "tiempo_seg": 4.7,
+      "trials": 15
+    },
+    {
+      "arquitectura": "lightgbm",
+      "threshold": 0.06,
+      "auc": 0.842590870340231,
+      "recall": 0.9812834224598931,
+      "precision": 0.3556201550387597,
+      "dpd_gender": 0.02788832573274136,
+      "eod_gender": 0.021683492108630742,
+      "costo_total_usd": 74900.0,
+      "costo_por_cliente_usd": 53.158268275372606,
+      "fn": 7,
+      "fp": 665,
+      "tiempo_seg": 2.2,
+      "trials": 10
+    },
+    {
+      "arquitectura": "logreg",
+      "threshold": 0.06,
+      "auc": 0.8279185719083417,
+      "recall": 0.9625668449197861,
+      "precision": 0.3596403596403596,
+      "dpd_gender": 0.02821492941731485,
+      "eod_gender": 0.027318580825731353,
+      "costo_total_usd": 80900.0,
+      "costo_por_cliente_usd": 57.416607523066006,
+      "fn": 14,
+      "fp": 641,
+      "tiempo_seg": 2.9,
+      "trials": 15
+    },
+    {
+      "arquitectura": "mlp",
+      "threshold": 0.09,
+      "auc": 0.8334663773282699,
+      "recall": 0.9652406417112299,
+      "precision": 0.3877551020408163,
+      "dpd_gender": 0.020063949807868298,
+      "eod_gender": 0.011393655473818876,
+      "costo_total_usd": 72600.0,
+      "costo_por_cliente_usd": 51.525904897090136,
+      "fn": 13,
+      "fp": 570,
+      "tiempo_seg": 4.9,
+      "trials": 8
+    }
+  ],
+  "best_params": {
+    "xgboost": {
+      "n_estimators": 250,
+      "max_depth": 5,
+      "learning_rate": 0.013808106758605908,
+      "subsample": 0.6463561171183283,
+      "colsample_bytree": 0.8827301451476095,
+      "reg_alpha": 0.009867677898905353,
+      "reg_lambda": 0.10066833074297281
+    },
+    "lightgbm": {
+      "n_estimators": 50,
+      "num_leaves": 59,
+      "max_depth": 4,
+      "learning_rate": 0.07277150634170934,
+      "reg_alpha": 0.017654048052495083,
+      "reg_lambda": 0.12030178871154672
+    },
+    "logreg": {
+      "C": 0.0011696859787639203,
+      "solver": "liblinear"
+    },
+    "mlp": {
+      "hidden": [
+        64
+      ],
+      "alpha": 0.00029380279387035364,
+      "learning_rate_init": 0.00020511104188433984,
+      "activation": "tanh"
+    }
+  },
+  "metodologia": {
+    "busqueda": "Optuna TPE + MedianPruner",
+    "objetivo_cv": "business_cost (no AUC)",
+    "calibracion": "isotonic CalibratedClassifierCV cv=3",
+    "threshold_tuning": "grid 0.05-0.95 sobre OOF proba, minimiza business_cost"
+  }
+}

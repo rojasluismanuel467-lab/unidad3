@@ -2,7 +2,8 @@
 
 Diseñado para correrse desde el pre-commit hook: es rápido (solo lee JSONs y
 formatea markdown), no reentrena nada. Si faltan JSONs (p.ej. nunca se corrió
-mitigación), el script avisa y sale con codigo 0 (no bloquea el commit).
+mitigación), o si el entorno no tiene las libs (numpy, pandas), el script avisa
+y sale con codigo 0 (no bloquea el commit).
 
 Uso manual: `python regenerate_docs.py`
 """
@@ -12,12 +13,20 @@ import json
 import sys
 from pathlib import Path
 
-from parte_c_combinacion import (
-    build_comparative_table,
-    build_model_card,
-    build_pm_response,
-    table_to_markdown,
-)
+try:
+    from parte_c_combinacion import (
+        build_comparative_table,
+        build_model_card,
+        build_pm_response,
+        table_to_markdown,
+    )
+except ImportError as e:
+    print(
+        f"regenerate_docs: skip -- entorno sin las libs necesarias ({e}). "
+        "Corre desde el venv del proyecto para regenerar los docs.",
+        file=sys.stderr,
+    )
+    sys.exit(0)
 
 ART = Path("artifacts")
 REQUIRED = [
