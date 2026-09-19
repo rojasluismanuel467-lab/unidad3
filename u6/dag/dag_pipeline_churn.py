@@ -255,7 +255,21 @@ def pipeline_mlops_churn():
 
         loaded_at = _dt.now(_tz.utc).isoformat()
 
-        def _preparar_ndjson(path_in: str, extra: dict) -> str | None:
+        # Schema exacto de las tablas (ver u6-g02-sql-20260919.sql).
+        # Filtramos el payload de la API para no enviar campos extra
+        # (`source`, `input_file`) que la tabla `resultados` no tiene.
+        RES_COLS = {
+            "run_id", "archivo", "customer_id", "fecha_lote",
+            "customer_risk_score", "predicted_churn", "threshold_used",
+            "model_version", "predicted_at", "requested_by", "loaded_at",
+        }
+        CUR_COLS = {
+            "run_id", "archivo", "customer_id", "fecha_lote",
+            "http_status", "error_type", "error_detail", "raw",
+            "quarantined_at",
+        }
+
+        def _preparar_ndjson(path_in: str, extra: dict, cols: set[str]) -> str | None:
             if not os.path.exists(path_in) or os.path.getsize(path_in) == 0:
                 return None
             path_out = path_in.replace(".jsonl", "_bq.jsonl")
@@ -263,6 +277,7 @@ def pipeline_mlops_churn():
                 for line in f_in:
                     obj = json.loads(line)
                     obj.update(extra)
+                    obj = {k: v for k, v in obj.items() if k in cols}
                     f_out.write(json.dumps(obj, default=str) + "\n")
             return path_out
 
@@ -283,7 +298,7 @@ def pipeline_mlops_churn():
         res_extra = {"run_id": scored["run_id"], "archivo": scored["archivo"],
                      "loaded_at": loaded_at}
         res_path = _preparar_ndjson(
-            f"/tmp/u6_out/{scored['run_id']}_res.jsonl", res_extra
+            f"/tmp/u6_out/{scored['run_id']}_res.jsonl", res_extra, RES_COLS
         )
         if res_path:
             _bq_insert("resultados", res_path)
@@ -294,7 +309,7 @@ def pipeline_mlops_churn():
         cur_extra = {"run_id": scored["run_id"], "archivo": scored["archivo"],
                      "quarantined_at": loaded_at}
         cur_path = _preparar_ndjson(
-            f"/tmp/u6_out/{scored['run_id']}_cur.jsonl", cur_extra
+            f"/tmp/u6_out/{scored['run_id']}_cur.jsonl", cur_extra, CUR_COLS
         )
         if cur_path:
             _bq_insert("cuarentena", cur_path)
