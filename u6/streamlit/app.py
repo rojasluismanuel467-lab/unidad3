@@ -29,9 +29,9 @@ st.markdown(
 **Grupo 2** — Curso: *Computacion en la Nube para IA* · Profesora: **Diana Jaimes**
 
 **Integrantes:**
-- Gabriel Escobar
-- David Artunduaga
-- Luis Rojas
+- Gabriel Ernesto Escobar A00399291
+- David Artunduaga Penagos A00396342
+- Luis Manuel Rojas A00399289
 
 ---
 

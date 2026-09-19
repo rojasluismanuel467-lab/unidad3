@@ -2,7 +2,7 @@
 
 Contiene los entregables de las Unidades 3, 4 y 5 del curso *Computación en la Nube para IA* (Profesora Diana Jaimes). Reutiliza los mismos artifacts entre unidades.
 
-**Integrantes**: Gabriel Escobar · David Artunduaga · Luis Rojas
+**Integrantes**: Gabriel Ernesto Escobar A00399291 · David Artunduaga Penagos A00396342 · Luis Manuel Rojas A00399289
 
 ## Unidades
 

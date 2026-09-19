@@ -8,7 +8,7 @@ Produce hallazgos_u6.json con todo lo que consume el Streamlit:
 - D5: análisis de BancoPago (variantes, mapeo canónico)
 - D6: insumos numéricos para armar la respuesta al cliente
 
-Grupo 2 - Gabriel Escobar, David Artunduaga, Luis Rojas.
+Grupo 2 - Gabriel Ernesto Escobar A00399291, David Artunduaga Penagos A00396342, Luis Manuel Rojas A00399289.
 """
 from __future__ import annotations
 

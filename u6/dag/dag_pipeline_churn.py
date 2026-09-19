@@ -15,7 +15,7 @@ Diferencia con el ejemplo de clase (defendible):
     InternetService/OnlineSecurity/TechSupport en U4). Este DAG mapea el
     CSV de 22 columnas del cliente al schema de 11 campos de nuestra API.
 
-Grupo 2 - Gabriel Escobar, David Artunduaga, Luis Rojas.
+Grupo 2 - Gabriel Ernesto Escobar A00399291, David Artunduaga Penagos A00396342, Luis Manuel Rojas A00399289.
 """
 from __future__ import annotations
 

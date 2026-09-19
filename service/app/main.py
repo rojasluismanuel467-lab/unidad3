@@ -8,7 +8,7 @@ Diseno con mejoras metodologicas:
   - Validacion de dominio en pydantic; coherencia semantica en main (separacion
     de responsabilidades: schema = transporte, main = negocio)
 
-Grupo 2 - Gabriel Escobar, David Artunduaga, Luis Rojas.
+Grupo 2 - Gabriel Ernesto Escobar A00399291, David Artunduaga Penagos A00396342, Luis Manuel Rojas A00399289.
 """
 from __future__ import annotations
 

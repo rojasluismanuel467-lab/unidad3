@@ -1,5 +1,5 @@
 -- ============================================================================
--- Grupo 2 - Gabriel Escobar, David Artunduaga, Luis Rojas
+-- Grupo 2 - Gabriel Ernesto Escobar A00399291, David Artunduaga Penagos A00396342, Luis Manuel Rojas A00399289
 -- Curso: Computación en la Nube para IA — Profesora: Diana Jaimes
 -- Unidad 6 — Trabajo final: monitoreo del pipeline de retencion en produccion
 -- ============================================================================

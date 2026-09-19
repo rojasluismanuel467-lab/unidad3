@@ -2,7 +2,7 @@
 
 **Grupo 2** · Curso: *Computación en la Nube para IA* · Profesora: Diana Jaimes
 
-**Integrantes:** Gabriel Escobar · David Artunduaga · Luis Rojas
+**Integrantes:** Gabriel Ernesto Escobar A00399291 · David Artunduaga Penagos A00396342 · Luis Manuel Rojas A00399289
 
 Alineado con la guía `UNIDAD6_Lab_Paso_a_Paso.md` que la profesora entregó
 en clase (patrón GCS → API → BigQuery `resultados` + `cuarentena`).

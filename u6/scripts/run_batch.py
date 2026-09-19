@@ -9,7 +9,7 @@ Uso:
         --url https://u5-g02-cr-20260914-xxxx.a.run.app \
         --out-dir u6/data/outputs/
 
-Grupo 2 — Gabriel Escobar, David Artunduaga, Luis Rojas.
+Grupo 2 — Gabriel Ernesto Escobar A00399291, David Artunduaga Penagos A00396342, Luis Manuel Rojas A00399289.
 """
 from __future__ import annotations
 

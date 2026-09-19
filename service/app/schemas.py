@@ -4,7 +4,7 @@ Refleja las 10 features seleccionadas y justificadas en la Tarea 1 (U3).
 Los enums cierran el dominio de los categoricos -> FastAPI devuelve 422
 automaticamente cuando un valor cae fuera del dominio esperado.
 
-Grupo 2 - Gabriel Escobar, David Artunduaga, Luis Rojas.
+Grupo 2 - Gabriel Ernesto Escobar A00399291, David Artunduaga Penagos A00396342, Luis Manuel Rojas A00399289.
 """
 from __future__ import annotations
 
