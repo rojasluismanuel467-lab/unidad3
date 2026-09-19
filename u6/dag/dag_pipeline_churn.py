@@ -1,0 +1,303 @@
+"""DAG del pipeline batch de churn — Unidad 6, Grupo 2.
+
+Alineado con el patron de la guia de clase (Airflow 3.3.2):
+
+    apache-airflow dags test pipeline_mlops_churn \
+        --conf '{"archivo": "lotes_retencion_u6.csv"}'
+
+Flujo:
+    leer_de_bucket -> validar_schema -> llamar_api (con quarantine) ->
+        cargar_a_bq (resultados + cuarentena) -> reporte_metricas
+
+Diferencia con el ejemplo de clase (defendible):
+    El servicio de U5 del Grupo 2 (u5-g02-cr-20260914) tiene 10 features
+    (removimos SeniorCitizen en U3 por instruccion del profesor, agregamos
+    InternetService/OnlineSecurity/TechSupport en U4). Este DAG mapea el
+    CSV de 22 columnas del cliente al schema de 11 campos de nuestra API.
+
+Grupo 2 - Gabriel Escobar, David Artunduaga, Luis Rojas.
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+from airflow.decorators import dag, task
+from airflow.exceptions import AirflowSkipException
+
+# Configuracion via env vars (Cloud Shell / Workbench)
+API_URL = os.getenv("API_URL", "https://TU_SERVICE_URL/predict")
+GCS_BUCKET = os.getenv("GCS_BUCKET", "computacionnube20262-u6-g02-batches-20260919")
+BQ_DATASET = os.getenv("BQ_DATASET", "u6_g02_mlops_churn")
+BQ_PROJECT = os.getenv("BQ_PROJECT", "computacionnube20262")
+UMBRAL_CUARENTENA_PCT = float(os.getenv("UMBRAL_CUARENTENA_PCT", "2.5"))
+UMBRAL_DRIFT_QUALITY_GATE_PCT = float(os.getenv("UMBRAL_DRIFT_QUALITY_GATE_PCT", "50.0"))
+
+
+# ---------------------------------------------------------------------------
+# Helpers (import diferidos para evitar romper el parseo del DAG)
+# ---------------------------------------------------------------------------
+def _fetch_id_token(audience: str) -> str:
+    import google.auth.transport.requests
+    from google.oauth2 import id_token
+    auth_req = google.auth.transport.requests.Request()
+    return id_token.fetch_id_token(auth_req, audience)
+
+
+def _yn(v):
+    return str(v).strip().lower() == "yes"
+
+
+def _to_payload(row: dict) -> dict[str, Any]:
+    """Del CSV crudo (22 cols) al payload de NUESTRA API U5 (11 campos).
+
+    Ignora: customerID_lookalike, SeniorCitizen, PhoneService, MultipleLines,
+    OnlineBackup, DeviceProtection, StreamingTV, StreamingMovies,
+    PaperlessBilling, TotalCharges, BancoPago (esta ultima analizada aparte
+    porque el modelo no la conoce).
+    """
+    return {
+        "customer_id": str(row["customerID"]),
+        "gender": row["gender"],
+        "partner": _yn(row.get("Partner")),
+        "dependents": _yn(row.get("Dependents")),
+        "tenure": int(row["tenure"]),
+        "contract": row["Contract"],
+        "payment_method": row["PaymentMethod"],
+        "monthly_charges": float(row["MonthlyCharges"]),
+        "internet_service": row["InternetService"],
+        "online_security": row["OnlineSecurity"],
+        "tech_support": row["TechSupport"],
+    }
+
+
+# ---------------------------------------------------------------------------
+# DAG definition
+# ---------------------------------------------------------------------------
+@dag(
+    dag_id="pipeline_mlops_churn",
+    description="U6 Grupo 2 — batch scoring desde GCS a BigQuery via Cloud Run",
+    schedule=None,  # se dispara con --conf, como pide la guia
+    start_date=datetime(2026, 9, 19, tzinfo=timezone.utc),
+    catchup=False,
+    max_active_runs=1,
+    tags=["u6", "g02", "grupo2", "churn", "mlops"],
+    default_args={
+        "owner": "grupo2",
+        "retries": 2,
+        "retry_delay": timedelta(minutes=3),
+    },
+    doc_md=__doc__,
+)
+def pipeline_mlops_churn():
+
+    @task
+    def leer_de_bucket(**context) -> dict:
+        """Lee el CSV desde gs://{GCS_BUCKET}/input/{archivo}."""
+        import pandas as pd
+        from google.cloud import storage
+
+        archivo = context["dag_run"].conf.get("archivo", "")
+        if not archivo:
+            raise ValueError(
+                "Falta --conf '{\"archivo\": \"...\"}'. "
+                "Ej: apache-airflow dags test pipeline_mlops_churn "
+                "--conf '{\"archivo\": \"lotes_retencion_u6.csv\"}'"
+            )
+        client = storage.Client()
+        bucket = client.bucket(GCS_BUCKET)
+        blob = bucket.blob(f"input/{archivo}")
+
+        tmp = f"/tmp/{archivo}"
+        blob.download_to_filename(tmp)
+        df = pd.read_csv(tmp)
+
+        run_id = f"{context['ts_nodash']}-{archivo.replace('.csv', '')}"
+        print(f"[leer_de_bucket] {archivo}: {len(df)} filas, run_id={run_id}")
+        return {"run_id": run_id, "archivo": archivo, "n_filas": int(len(df)), "path": tmp}
+
+    @task
+    def validar_schema(payload: dict) -> dict:
+        """Chequeo minimo: columnas obligatorias presentes."""
+        import pandas as pd
+        df = pd.read_csv(payload["path"])
+        req = {"customerID", "gender", "tenure", "Contract", "PaymentMethod",
+               "MonthlyCharges", "InternetService", "OnlineSecurity", "TechSupport"}
+        missing = req - set(df.columns)
+        if missing:
+            raise ValueError(f"Faltan columnas obligatorias: {missing}")
+        return payload
+
+    @task
+    def llamar_api(payload: dict) -> dict:
+        """Envia cada fila al servicio Cloud Run; separa 422 en cuarentena."""
+        import pandas as pd
+        import requests
+
+        df = pd.read_csv(payload["path"])
+        token = _fetch_id_token(API_URL.rsplit("/", 1)[0])
+        session = requests.Session()
+
+        resultados: list[dict] = []
+        cuarentena: list[dict] = []
+
+        for _, row in df.iterrows():
+            row_d = row.to_dict()
+            try:
+                body = _to_payload(row_d)
+            except Exception as e:
+                cuarentena.append({
+                    "customer_id": str(row_d.get("customerID", "")),
+                    "fecha_lote": row_d.get("fecha_lote"),
+                    "http_status": None,
+                    "error_type": "client_side_parse",
+                    "error_detail": json.dumps({"error": str(e)}),
+                    "raw": json.dumps({k: str(v) for k, v in row_d.items()}),
+                })
+                continue
+
+            try:
+                r = session.post(
+                    API_URL, json=body, timeout=15,
+                    headers={"Authorization": f"Bearer {token}",
+                             "Content-Type": "application/json"},
+                )
+            except Exception as e:
+                cuarentena.append({
+                    "customer_id": body["customer_id"],
+                    "fecha_lote": row_d.get("fecha_lote"),
+                    "http_status": None,
+                    "error_type": "network",
+                    "error_detail": json.dumps({"error": str(e)}),
+                    "raw": json.dumps(body),
+                })
+                continue
+
+            if r.status_code == 200:
+                data = r.json()
+                data["fecha_lote"] = row_d.get("fecha_lote")
+                resultados.append(data)
+            else:
+                cuarentena.append({
+                    "customer_id": body["customer_id"],
+                    "fecha_lote": row_d.get("fecha_lote"),
+                    "http_status": r.status_code,
+                    "error_type": "api_reject",
+                    "error_detail": r.text[:1000],
+                    "raw": json.dumps(body),
+                })
+
+        # Escribe a disco temporal — la task siguiente sube a BQ
+        Path("/tmp/u6_out").mkdir(exist_ok=True)
+        with open(f"/tmp/u6_out/{payload['run_id']}_res.jsonl", "w") as f:
+            for r in resultados:
+                f.write(json.dumps(r) + "\n")
+        with open(f"/tmp/u6_out/{payload['run_id']}_cur.jsonl", "w") as f:
+            for r in cuarentena:
+                f.write(json.dumps(r) + "\n")
+
+        tasa = round(len(cuarentena) / max(payload["n_filas"], 1) * 100, 2)
+        print(f"[llamar_api] OK={len(resultados)}  Cuarentena={len(cuarentena)}  Tasa={tasa}%")
+        return {**payload, "n_ok": len(resultados), "n_cuarentena": len(cuarentena),
+                "tasa_rechazo_pct": tasa}
+
+    @task
+    def cargar_a_bq(scored: dict) -> dict:
+        """Sube resultados y cuarentena a BigQuery (append idempotente por run_id)."""
+        from google.cloud import bigquery
+
+        client = bigquery.Client(project=BQ_PROJECT)
+
+        # Enriquece cada fila con run_id + archivo antes de subir
+        def _enrich(path_in: str, columnas_extra: dict) -> str:
+            path_out = path_in + ".enriched.jsonl"
+            with open(path_in) as fin, open(path_out, "w") as fout:
+                for line in fin:
+                    obj = json.loads(line)
+                    obj.update(columnas_extra)
+                    fout.write(json.dumps(obj) + "\n")
+            return path_out
+
+        extra = {"run_id": scored["run_id"], "archivo": scored["archivo"]}
+
+        # ---- resultados ----
+        res_path = _enrich(f"/tmp/u6_out/{scored['run_id']}_res.jsonl", extra)
+        if os.path.getsize(res_path) > 0:
+            job = client.load_table_from_uri(
+                None,  # placeholder — usaremos file API
+                f"{BQ_PROJECT}.{BQ_DATASET}.resultados",
+                job_config=None,
+            ) if False else None
+            # Con file API (mas simple para JSONL):
+            with open(res_path, "rb") as f:
+                job_config = bigquery.LoadJobConfig(
+                    source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+                    write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+                    schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
+                    autodetect=False,
+                )
+                job = client.load_table_from_file(
+                    f, f"{BQ_PROJECT}.{BQ_DATASET}.resultados",
+                    job_config=job_config,
+                )
+            job.result()
+            print(f"[cargar_a_bq] resultados: cargadas {job.output_rows} filas")
+
+        # ---- cuarentena ----
+        cur_path = _enrich(f"/tmp/u6_out/{scored['run_id']}_cur.jsonl", extra)
+        if os.path.getsize(cur_path) > 0:
+            with open(cur_path, "rb") as f:
+                job_config = bigquery.LoadJobConfig(
+                    source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+                    write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+                    autodetect=False,
+                )
+                job = client.load_table_from_file(
+                    f, f"{BQ_PROJECT}.{BQ_DATASET}.cuarentena",
+                    job_config=job_config,
+                )
+            job.result()
+            print(f"[cargar_a_bq] cuarentena: cargadas {job.output_rows} filas")
+
+        return scored
+
+    @task
+    def quality_gate(scored: dict) -> dict:
+        """Si tasa_rechazo > umbral_drift, marca el DAG como FAILED (como en la guia)."""
+        tasa = scored["tasa_rechazo_pct"]
+        if tasa > UMBRAL_DRIFT_QUALITY_GATE_PCT:
+            raise ValueError(
+                f"[FAILED] tasa_rechazo={tasa}% > umbral_drift={UMBRAL_DRIFT_QUALITY_GATE_PCT}%. "
+                "Escenario drift: se paraliza la corrida."
+            )
+        if tasa > UMBRAL_CUARENTENA_PCT:
+            print(f"[WARN] tasa_rechazo={tasa}% > umbral_cuarentena={UMBRAL_CUARENTENA_PCT}%. "
+                  "Se registra pero no se pausa.")
+        return scored
+
+    @task
+    def reporte_metricas(scored: dict) -> None:
+        """Print de las metricas finales del run — visible en el log de Airflow."""
+        print(
+            f"{scored['archivo']}"
+            f"   {scored['n_filas']:3d} total"
+            f"   {scored['n_ok']:3d} OK"
+            f"   {scored['n_cuarentena']:3d} rechazados"
+            f"   {scored['tasa_rechazo_pct']:5.1f}%"
+            f"   run_id={scored['run_id']}"
+        )
+
+    # Wiring
+    p1 = leer_de_bucket()
+    p2 = validar_schema(p1)
+    p3 = llamar_api(p2)
+    p4 = cargar_a_bq(p3)
+    p5 = quality_gate(p4)
+    reporte_metricas(p5)
+
+
+dag = pipeline_mlops_churn()
