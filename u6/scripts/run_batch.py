@@ -45,18 +45,37 @@ def _fetch_id_token(audience: str) -> str:
 
 
 def _to_payload(row: pd.Series) -> dict[str, Any]:
-    """Convierte una fila del CSV en el payload que espera /predict."""
+    """Convierte una fila del CSV en el payload que espera /predict.
+
+    Rechaza NaN/None de forma explicita para que caigan como client_side_parse
+    (rechazo del cliente) y no como network (json.dumps se rompe con NaN).
+    """
+    import math
+
     def yn_to_bool(v):
         return str(v).strip().lower() == "yes"
+
+    def _to_int(v, name):
+        n = pd.to_numeric(v, errors="raise")
+        if pd.isna(n):
+            raise ValueError(f"{name} es NaN/None")
+        return int(n)
+
+    def _to_float(v, name):
+        n = pd.to_numeric(v, errors="raise")
+        if pd.isna(n) or (isinstance(n, float) and math.isnan(n)):
+            raise ValueError(f"{name} es NaN/None")
+        return float(n)
+
     return {
         "customer_id": str(row["customerID"]),
         "gender": row["gender"],
         "partner": yn_to_bool(row.get("Partner")),
         "dependents": yn_to_bool(row.get("Dependents")),
-        "tenure": int(pd.to_numeric(row["tenure"], errors="raise")),
+        "tenure": _to_int(row["tenure"], "tenure"),
         "contract": row["Contract"],
         "payment_method": row["PaymentMethod"],
-        "monthly_charges": float(pd.to_numeric(row["MonthlyCharges"], errors="raise")),
+        "monthly_charges": _to_float(row["MonthlyCharges"], "monthly_charges"),
         "internet_service": row["InternetService"],
         "online_security": row["OnlineSecurity"],
         "tech_support": row["TechSupport"],

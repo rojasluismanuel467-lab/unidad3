@@ -59,16 +59,39 @@ def _to_payload(row: dict) -> dict[str, Any]:
     OnlineBackup, DeviceProtection, StreamingTV, StreamingMovies,
     PaperlessBilling, TotalCharges, BancoPago (esta ultima analizada aparte
     porque el modelo no la conoce).
+
+    Rechaza explicitamente NaN/None para que caigan como client_side_parse
+    (json.dumps se rompe con NaN y confundiria el error como network).
     """
+    import math
+
+    def _int(v, name):
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            raise ValueError(f"{name} no parseable: {v!r}")
+        if math.isnan(n):
+            raise ValueError(f"{name} es NaN")
+        return int(n)
+
+    def _float(v, name):
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            raise ValueError(f"{name} no parseable: {v!r}")
+        if math.isnan(n):
+            raise ValueError(f"{name} es NaN")
+        return n
+
     return {
         "customer_id": str(row["customerID"]),
         "gender": row["gender"],
         "partner": _yn(row.get("Partner")),
         "dependents": _yn(row.get("Dependents")),
-        "tenure": int(row["tenure"]),
+        "tenure": _int(row["tenure"], "tenure"),
         "contract": row["Contract"],
         "payment_method": row["PaymentMethod"],
-        "monthly_charges": float(row["MonthlyCharges"]),
+        "monthly_charges": _float(row["MonthlyCharges"], "monthly_charges"),
         "internet_service": row["InternetService"],
         "online_security": row["OnlineSecurity"],
         "tech_support": row["TechSupport"],
