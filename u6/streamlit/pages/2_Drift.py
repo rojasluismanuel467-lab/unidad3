@@ -117,9 +117,60 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
+# Sesgo de seleccion (senal secundaria)
+# ---------------------------------------------------------------------------
+st.header("Sesgo de seleccion en las semanas con rechazo alto")
+st.caption(
+    "Los clientes que sobreviven la cuarentena en las ultimas semanas tienen "
+    "scores mas bajos y menos variados. Es senal indirecta de que el filtro "
+    "se queda con los perfiles 'tradicionales' — los raros se van a cuarentena."
+)
+
+# Estas cifras vienen del diagnostico contra BQ del 2026-09-19 sobre la
+# corrida buena (20260919T203047). Ver `u6/analysis/diagnostico_bq.py`.
+sesgo_data = pd.DataFrame([
+    {"semana": "2026-06-29", "n_ok": 49, "media_score": 0.317, "std_score": 0.141},
+    {"semana": "2026-07-06", "n_ok": 45, "media_score": 0.289, "std_score": 0.145},
+    {"semana": "2026-07-13", "n_ok": 81, "media_score": 0.286, "std_score": 0.123},
+    {"semana": "2026-07-20", "n_ok": 61, "media_score": 0.296, "std_score": 0.147},
+    {"semana": "2026-07-27", "n_ok": 95, "media_score": 0.292, "std_score": 0.145},
+    {"semana": "2026-08-03", "n_ok": 56, "media_score": 0.308, "std_score": 0.156},
+    {"semana": "2026-08-10", "n_ok": 85, "media_score": 0.257, "std_score": 0.142},
+    {"semana": "2026-08-17", "n_ok": 70, "media_score": 0.267, "std_score": 0.112},
+    {"semana": "2026-08-24", "n_ok": 74, "media_score": 0.228, "std_score": 0.093},
+    {"semana": "2026-08-31", "n_ok": 37, "media_score": 0.202, "std_score": 0.059},
+])
+
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("**Score promedio de los OK por semana**")
+    st.line_chart(sesgo_data.set_index("semana")["media_score"], height=220)
+with col2:
+    st.markdown("**Desviacion estandar de los OK por semana**")
+    st.line_chart(sesgo_data.set_index("semana")["std_score"], height=220)
+
+with st.expander("Tabla numerica del sesgo de seleccion"):
+    st.dataframe(
+        sesgo_data, use_container_width=True, hide_index=True,
+        column_config={
+            "media_score": st.column_config.NumberColumn(format="%.3f"),
+            "std_score": st.column_config.NumberColumn(format="%.3f"),
+            "n_ok": st.column_config.NumberColumn(format="%d"),
+        },
+    )
+
+st.markdown(
+    "**Lectura.** En la semana 2026-08-31 (43.9 % rechazo) los 37 clientes "
+    "que pasaron tienen score medio 0.20 y stdev 0.06 — muy comprimido. "
+    "Los perfiles nuevos (PSE, PayPal, tenure >100) caen a cuarentena y "
+    "solo pasan los clientes con perfiles conocidos. El modelo ve una "
+    "poblacion ficticiamente 'tradicional' que no refleja la realidad."
+)
+
+# ---------------------------------------------------------------------------
 # Hallazgo principal
 # ---------------------------------------------------------------------------
 st.header("Hallazgo principal")
 st.markdown(f"> {drift['hallazgo_principal']}")
 
-footer(fuentes=["hallazgos_u6.json"])
+footer(fuentes=["hallazgos_u6.json", "BQ resultados corrida 20260919T203047"])

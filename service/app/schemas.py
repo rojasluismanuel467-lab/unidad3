@@ -74,8 +74,12 @@ class ClienteInput(BaseModel):
     partner: bool = Field(..., description="True si el cliente tiene pareja")
     dependents: bool = Field(..., description="True si el cliente tiene dependientes")
     tenure: int = Field(
-        ..., ge=0, le=100,
-        description="Meses de antiguedad como cliente"
+        ..., ge=0, le=200,
+        description=(
+            "Meses de antiguedad como cliente. Rango original 0-100 se amplio "
+            "a 0-200 en U6 tras detectar cliente RET-0548 con tenure=130 "
+            "rechazado erroneamente (10.8 anios es plausible en telecom)."
+        ),
     )
 
     contract: Contract = Field(..., description="Month-to-month | One year | Two year")

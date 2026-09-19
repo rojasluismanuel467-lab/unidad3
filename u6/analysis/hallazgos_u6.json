@@ -223,7 +223,17 @@
         ]
       }
     ],
-    "insight_texto_crudo": "La cuarentena guarda el registro completo como string. Para agrupar por tipo de error hay que re-parsear cada fila manualmente. Ese re-parseo es exactamente el trabajo que la validaci\u00f3n pydantic ya hizo. Dise\u00f1o mejorable: guardar el objeto RequestValidationError.errors() serializado como JSON separado, no solo el texto crudo."
+    "insight_texto_crudo": "La cuarentena guarda el registro completo como string. Para agrupar por tipo de error hay que re-parsear cada fila manualmente. Ese re-parseo es exactamente el trabajo que la validaci\u00f3n pydantic ya hizo. Dise\u00f1o mejorable: guardar el objeto RequestValidationError.errors() serializado como JSON separado, no solo el texto crudo.",
+    "hallazgos_extra_al_correr_pipeline_real": {
+      "fecha_ejecucion": "2026-09-19",
+      "corrida_analizada": "20260919T203047-lotes_retencion_u6",
+      "descubrimientos": [
+        "**10 filas** con error client_side_parse por NaN o 'sin dato' en tenure/monthly_charges: RET-0006 (monthly_charges='sin dato'), RET-0241 (tenure=NaN), RET-0443 (monthly_charges=NaN), entre otros. Fuente sucia del CRM, no bug del pipeline.",
+        "**Bug de contrato detectado**: RET-0548 rechazado con http_status=422 por tenure=130 (schemas.py tiene tenure<=100). Un cliente con 10.8 anios de antiguedad es plausible en telecom. Fix aplicado en U6: subir limite a 200. Este hallazgo NO se derivaba del EDA porque el bug estaba en el contrato, no en los datos.",
+        "**40 rechazos api_reject de 50 (80%)** son valores nuevos de PaymentMethod (PSE, PayPal, Digital wallet). Confirma la hipotesis D6.",
+        "El pipeline detecto correctamente el drift: semanas 2026-08-24 (18.7% rechazo) y 2026-08-31 (43.9% rechazo) coinciden con el analisis previo."
+      ]
+    }
   },
   "D5_banco_pago": {
     "primera_semana_con_datos": "2026-07-27",
@@ -787,6 +797,20 @@
         "due": "2026-09-26",
         "prioridad": "P0",
         "impacto": "Elimina 49% de los rechazos"
+      },
+      {
+        "item": "Subir limite superior de tenure de 100 a 200 meses en schemas.py (aplicado en U6, commit fc1131b+)",
+        "owner": "Grupo 2 (Luis)",
+        "due": "2026-09-19",
+        "prioridad": "P0",
+        "impacto": "Elimina rechazo espurio de clientes con 10+ anios de antiguedad (RET-0548 fue el caso detectado)"
+      },
+      {
+        "item": "Revisar mas casos de client_side_parse (10 filas con NaN/'sin dato' en tenure/monthly_charges) con el equipo del CRM para trazar el origen de la data sucia",
+        "owner": "Grupo 2 + Direccion de Retencion",
+        "due": "2026-10-03",
+        "prioridad": "P1",
+        "impacto": "Estos NO son drift semantico, son falla de captura upstream"
       },
       {
         "item": "Redeploy Cloud Run u5-g02-cr con nuevo schema",
