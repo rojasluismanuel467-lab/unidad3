@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generado_en": "2026-09-19T17:55:35.059269+00:00",
+    "generado_en": "2026-09-19T18:41:52.525567+00:00",
     "csv_filas": 703,
     "csv_columnas": 22,
     "semanas": [
@@ -682,7 +682,8 @@
       "psi_leve": 0.1,
       "psi_material": 0.25,
       "ks_pvalue_alerta": 0.05,
-      "justificacion_psi_material_0.25": "Est\u00e1ndar del EMP (Verbraken 2013) y de la industria: PSI > 0.25 es drift material que amerita retraining. PSI 0.10-0.25 es leve, monitorear."
+      "justificacion_psi_material_0.25": "Umbral heur\u00edstico de credit scoring (Siddiqi 2006, 'Credit Risk Scorecards', Wiley): PSI > 0.25 es drift material que amerita retraining; PSI 0.10-0.25 es leve, monitorear; PSI < 0.10 estable. Es convencional, no derivado estad\u00edsticamente.",
+      "limitacion_reconocida": "PSI no es una proper divergence y es sensible al binning (Bayram et al. 2022). Como screening est\u00e1 bien; para producci\u00f3n robusta la literatura recomienda complementar con MMD multivariado (Rabanser et al. 2019, NeurIPS 'Failing Loudly'). Nuestro n=703/semana no lo justifica todav\u00eda."
     },
     "hallazgo_principal": "El drift vs training (U4) NO coincide con el drift vs las primeras 4 semanas del CSV. La lectura correcta es: los datos de hoy se parecen menos al training que hace dos meses. Esto sugiere que la POBLACI\u00d3N cambi\u00f3 (no solo un ruido de captura). Es el hallazgo que responde D3."
   },
@@ -723,6 +724,119 @@
       "mediano_plazo_mes": "RE-ENTRENAR el modelo con las \u00faltimas 8 semanas de datos etiquetados, agregando: (a) los nuevos valores de PaymentMethod como categor\u00edas v\u00e1lidas; (b) BancoPago SOLO SI la captura se estandariza (mapeo canonicalizado que reduce las 12 variantes a 6).",
       "largo_plazo": "Instaurar monitoreo autom\u00e1tico de PSI en el pipeline nocturno de Airflow (task drift_check con quality gate). Alerta si PSI > 0.25 en cualquier feature clave. Este mismo pipeline es la l\u00ednea base \u2014 si hubi\u00e9ramos tenido esto en producci\u00f3n, la alerta habr\u00eda saltado hace 3 semanas."
     },
+    "timeline_sre": [
+      {
+        "fecha": "2026-06-29",
+        "evento": "Inicio del baseline (semana 1)",
+        "estado": "verde",
+        "detalle": "Pipeline en operaci\u00f3n normal, tasa rechazo 2%"
+      },
+      {
+        "fecha": "2026-07-27",
+        "evento": "BancoPago empieza a llegar",
+        "estado": "amarillo",
+        "detalle": "Columna nueva, captura imperfecta, no bloquea"
+      },
+      {
+        "fecha": "2026-08-24",
+        "evento": "PRIMERA ALARMA \u2014 cuarentena 18.7%",
+        "estado": "rojo",
+        "detalle": "PSI tenure salta a 5.0. Aparecen PSE y PayPal en PaymentMethod"
+      },
+      {
+        "fecha": "2026-08-31",
+        "evento": "SEGUNDA ALARMA \u2014 cuarentena 43.9%",
+        "estado": "rojo",
+        "detalle": "PSI tenure 8.2. Se agregan Digital wallet, Corporate billing, Credit card (manual)"
+      },
+      {
+        "fecha": "2026-09-19",
+        "evento": "An\u00e1lisis y respuesta al cliente",
+        "estado": "azul",
+        "detalle": "Este documento"
+      },
+      {
+        "fecha": "2026-09-19 \u2192 2026-09-26",
+        "evento": "Ampliar enum en schema (owner: Grupo 2)",
+        "estado": "planificado",
+        "detalle": "Fix inmediato; elimina 49% de los rechazos"
+      },
+      {
+        "fecha": "2026-10-03",
+        "evento": "Pausar scoring en segmento nuevo (owner: Dir. Retenci\u00f3n)",
+        "estado": "planificado",
+        "detalle": "Corto plazo; documentar como 'fuera de dominio'"
+      },
+      {
+        "fecha": "2026-10-31",
+        "evento": "Reentrenamiento con \u00faltimas 8 semanas (owner: Grupo 2 + Dir. Retenci\u00f3n)",
+        "estado": "planificado",
+        "detalle": "Mediano plazo"
+      },
+      {
+        "fecha": "2026-11-30",
+        "evento": "Monitoreo autom\u00e1tico PSI + calibraci\u00f3n drift (owner: Grupo 2)",
+        "estado": "planificado",
+        "detalle": "Largo plazo; incluye ECE mensual (Nixon 2019)"
+      }
+    ],
+    "action_items": [
+      {
+        "item": "Ampliar enum PaymentMethod en service/app/schemas.py",
+        "owner": "Grupo 2 (Gabriel)",
+        "due": "2026-09-26",
+        "prioridad": "P0",
+        "impacto": "Elimina 49% de los rechazos"
+      },
+      {
+        "item": "Redeploy Cloud Run u5-g02-cr con nuevo schema",
+        "owner": "Grupo 2 (David)",
+        "due": "2026-09-26",
+        "prioridad": "P0",
+        "impacto": "Habilita scoring de clientes con medios nuevos"
+      },
+      {
+        "item": "Documentar segmento 'poblaci\u00f3n nueva' (tenure<12 + payment method nuevo) para pausar scoring temporalmente",
+        "owner": "Direcci\u00f3n de Retenci\u00f3n",
+        "due": "2026-10-03",
+        "prioridad": "P1",
+        "impacto": "Evita decisiones basadas en modelo fuera de dominio"
+      },
+      {
+        "item": "Preparar dataset etiquetado \u00faltimas 8 semanas para reentrenamiento",
+        "owner": "Direcci\u00f3n de Retenci\u00f3n + Grupo 2 (Luis)",
+        "due": "2026-10-17",
+        "prioridad": "P1",
+        "impacto": "Habilita reentrenamiento"
+      },
+      {
+        "item": "Reentrenar modelo con dataset ampliado",
+        "owner": "Grupo 2 (Luis)",
+        "due": "2026-10-31",
+        "prioridad": "P1",
+        "impacto": "Modelo alineado con poblaci\u00f3n actual"
+      },
+      {
+        "item": "Instaurar task de drift check en DAG Airflow nocturno con quality gate",
+        "owner": "Grupo 2 (Gabriel)",
+        "due": "2026-11-30",
+        "prioridad": "P2",
+        "impacto": "Prevenci\u00f3n autom\u00e1tica de repetici\u00f3n"
+      },
+      {
+        "item": "Agregar m\u00e9tricas de calibration drift (ECE, Nixon 2019) cuando lleguen labels",
+        "owner": "Grupo 2 (David)",
+        "due": "2026-11-30",
+        "prioridad": "P2",
+        "impacto": "Detecta si threshold \u00f3ptimo por costo sigue siendo \u00f3ptimo"
+      }
+    ],
+    "limites_reconocidos_del_analisis": [
+      "**Solo data drift**: no tenemos labels de churn de las 10 semanas (llegan t\u00edpicamente en 30-90 d\u00edas), as\u00ed que NO podemos medir concept drift real ni performance del modelo. Todo lo reportado es covariate shift. Referencia: Gama et al. 2014 (ACM Computing Surveys).",
+      "**Sin calibration drift**: nuestro threshold \u00f3ptimo por costo negocio (U4) asume el modelo calibrado. Si el ECE (Expected Calibration Error) creci\u00f3, ese threshold ya no es \u00f3ptimo, aunque el PSI diga que las features est\u00e1n estables. Referencia: Nixon et al. 2019.",
+      "**PSI marginal, no conjunto**: PSI mide cada feature por separado. Drift conjunto en (tenure \u00d7 PaymentMethod \u00d7 MonthlyCharges) requerir\u00eda MMD multivariado (Gretton 2012, Rabanser 2019 NeurIPS). Con n=703 semanal no lo justificamos, pero s\u00ed lo reconocemos.",
+      "**Baseline peque\u00f1o (n=4)**: umbral 2\u03c3 es heur\u00edstico interpretable, no test riguroso. Bootstrap percentil (Efron 1979) dar\u00eda CIs m\u00e1s honestos. V\u00e1lido para el mensaje al cliente; refactor cuando haya \u226520 semanas de historia."
+    ],
     "conclusion_para_la_reunion": "El pipeline est\u00e1 trabajando bien: encontramos QU\u00c9 cambi\u00f3, CU\u00c1NDO, y CON QU\u00c9 MAGNITUD (PSI de tenure de 1.7 a 8.2, valores nuevos de PaymentMethod desde 2026-08-24). Lo que las campa\u00f1as est\u00e1n viendo es un modelo que fue entrenado hace 3 meses sobre una poblaci\u00f3n que ya no existe. Recomendamos ampliar el enum del schema (fix inmediato), pausar el scoring para el segmento 'nuevo' (fix esta semana), y re-entrenar (fix del mes). El modelo debe seguir en producci\u00f3n para el resto de la base, pero con monitoreo activo."
   }
 }

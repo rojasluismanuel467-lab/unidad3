@@ -80,5 +80,48 @@ st.info(":calendar: **Mediano plazo (este mes):** " + r["que_recomendamos"]["med
 st.success(":building_construction: **Largo plazo (infra):** " + r["que_recomendamos"]["largo_plazo"])
 
 st.markdown("---")
+st.header(":clipboard: Timeline SRE — cronologia del incidente")
+st.caption(
+    "Formato Google SRE Workbook (cap. Postmortem Culture). "
+    "Estructura los eventos con dueno y fecha."
+)
+timeline = r.get("timeline_sre", [])
+if timeline:
+    df_t = pd.DataFrame(timeline)
+    color_map = {
+        "verde": ":large_green_circle:",
+        "amarillo": ":large_yellow_circle:",
+        "rojo": ":red_circle:",
+        "azul": ":large_blue_circle:",
+        "planificado": ":black_circle:",
+    }
+    for e in timeline:
+        icono = color_map.get(e["estado"], "")
+        st.markdown(f"{icono} **{e['fecha']}** — {e['evento']}")
+        st.caption(f"&nbsp;&nbsp;&nbsp;&nbsp;{e['detalle']}")
+
+st.markdown("---")
+st.header(":ballot_box_with_check: Action items con owner y due date")
+st.caption(
+    "Cada recomendacion se traduce en accion concreta. Priorizadas por "
+    "impacto en la calidad del score."
+)
+items = r.get("action_items", [])
+if items:
+    df_i = pd.DataFrame(items)
+    st.dataframe(df_i, use_container_width=True, hide_index=True)
+
+st.markdown("---")
+st.header(":warning: Limites reconocidos de este analisis")
+st.caption(
+    "Ser explicito sobre lo que NO cubrimos evita conclusiones sobredimensionadas. "
+    "Basado en Gama 2014 (concept drift survey), Nixon 2019 (calibration), "
+    "Rabanser 2019 (MMD multivariado), Efron 1979 (bootstrap)."
+)
+limites = r.get("limites_reconocidos_del_analisis", [])
+for lim in limites:
+    st.warning(lim)
+
+st.markdown("---")
 st.header(":speech_balloon: Conclusion para la reunion")
 st.markdown(f"> {r['conclusion_para_la_reunion']}")
