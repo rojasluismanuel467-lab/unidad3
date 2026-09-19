@@ -60,7 +60,7 @@ def _bq_head(tabla: str, n: int) -> pd.DataFrame:
         )
     fq = f"{project}:{dataset}.{tabla}"
     result = subprocess.run(
-        ["bq", "head", "--format=json", f"-n{n}", fq],
+        ["bq", "head", "--format=json", "-n", str(n), fq],
         capture_output=True, text=True, timeout=60,
     )
     if result.returncode != 0:
