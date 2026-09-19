@@ -29,7 +29,8 @@ page_header(
     directriz="Herramienta",
 )
 
-CLOUD_RUN_URL = os.getenv("CLOUD_RUN_URL", "")
+U5_SERVICE_NAME = os.getenv("U5_SERVICE_NAME", "u5-g02-cr-20260914")
+U5_REGION = os.getenv("U5_REGION", "us-central1")
 
 
 def _fetch_id_token(audience: str) -> str:
@@ -47,13 +48,49 @@ def _fetch_id_token(audience: str) -> str:
     return result.stdout.strip()
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def _detectar_url_u5() -> str:
+    """Autodetecta el URL del servicio U5 via `gcloud run services describe`.
+
+    Orden de prioridad:
+      1. Env var CLOUD_RUN_URL (override manual).
+      2. `gcloud run services describe <U5_SERVICE_NAME> --region=<U5_REGION>`
+         — usa el nombre por defecto del Grupo 2 pero se puede reescribir
+         con env vars.
+    """
+    url = os.getenv("CLOUD_RUN_URL", "").strip()
+    if url:
+        return url
+    if not shutil.which("gcloud"):
+        return ""
+    try:
+        result = subprocess.run(
+            ["gcloud", "run", "services", "describe", U5_SERVICE_NAME,
+             f"--region={U5_REGION}", "--format=value(status.url)"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return ""
+
+
+url_detectado = _detectar_url_u5()
+
 with st.sidebar:
     st.text_input(
-        "Cloud Run URL", value=CLOUD_RUN_URL, key="url_input",
-        help="URL base del servicio U5 (sin `/predict`).",
+        "Cloud Run URL", value=url_detectado, key="url_input",
+        help=(
+            "Autodetectado via `gcloud run services describe "
+            f"{U5_SERVICE_NAME}`. Se puede sobreescribir aqui o con la "
+            "env var `CLOUD_RUN_URL`."
+        ),
     )
+    if url_detectado:
+        st.caption(f"URL autodetectado para `{U5_SERVICE_NAME}`.")
 
-url = st.session_state.get("url_input", CLOUD_RUN_URL)
+url = st.session_state.get("url_input", url_detectado)
 
 st.subheader("Datos del cliente")
 
