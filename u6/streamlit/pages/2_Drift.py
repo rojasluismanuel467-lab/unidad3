@@ -11,20 +11,30 @@ ROOT = Path(__file__).resolve().parents[1]
 with open(ROOT / "analysis" / "hallazgos_u6.json") as f:
     H = json.load(f)
 
-st.title(":chart_with_upwards_trend: D3 + D4 — Analisis de drift")
+
+st.set_page_config(layout="wide")
+st.markdown("""<style>
+.block-container {padding-top: 2.5rem; padding-bottom: 3rem; max-width: 1100px;}
+h1 {font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.25rem;}
+h2 {font-weight: 600; letter-spacing: -0.01em; margin-top: 2rem;}
+h3 {font-weight: 600; margin-top: 1.5rem;}
+[data-testid="stMetricLabel"] {font-size: 0.8rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em;}
+[data-testid="stMetricValue"] {font-size: 1.8rem; font-weight: 600;}
+footer, [data-testid="stDecoration"] {display: none;}
+</style>""", unsafe_allow_html=True)
+
+st.title("Analisis de drift")
+st.caption(
+    "D3 + D4 · Que tanto cambio la poblacion respecto al training set, "
+    "y respecto a las primeras semanas del CSV."
+)
 
 st.markdown(
-    """
-**Directriz 3:** los que pasaron la cuarentena tambien tienen algo que contar.
-Comparamos las 10 semanas contra 2 referencias distintas:
-
-1. **X_train de U4** — ¿los datos de hoy se parecen a los que el modelo aprendio?
-2. **Primeras 4 semanas del CSV** — ¿esta semana se parece a las primeras?
-
-**Directriz 4:** el metodo tiene que compararlas con el mismo criterio.
-Usamos **PSI** (Population Stability Index) para escalar cualquier feature
-al mismo eje: PSI > 0.25 es drift material (Verbraken 2013).
-"""
+    "Se comparan las 10 semanas contra dos referencias: X_train de U4 "
+    "(¿los datos de hoy se parecen a los que el modelo aprendio?) y las "
+    "primeras 4 semanas del CSV (¿esta semana se parece a las primeras?). "
+    "Metodo: **PSI** (Population Stability Index) — umbral 0.25 marca "
+    "drift material, siguiendo Siddiqi (2006, *Credit Risk Scorecards*)."
 )
 
 drift = H["D3_D4_drift"]

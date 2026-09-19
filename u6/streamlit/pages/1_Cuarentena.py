@@ -11,17 +11,31 @@ ROOT = Path(__file__).resolve().parents[1]
 with open(ROOT / "analysis" / "hallazgos_u6.json") as f:
     H = json.load(f)
 
-st.title(":triangular_flag_on_post: D1 + D2 — Cuarentena y umbral del DAG")
+
+st.set_page_config(layout="wide")
+st.markdown("""<style>
+.block-container {padding-top: 2.5rem; padding-bottom: 3rem; max-width: 1100px;}
+h1 {font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.25rem;}
+h2 {font-weight: 600; letter-spacing: -0.01em; margin-top: 2rem;}
+h3 {font-weight: 600; margin-top: 1.5rem;}
+[data-testid="stMetricLabel"] {font-size: 0.8rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em;}
+[data-testid="stMetricValue"] {font-size: 1.8rem; font-weight: 600;}
+footer, [data-testid="stDecoration"] {display: none;}
+</style>""", unsafe_allow_html=True)
+
+st.title("Cuarentena y calibracion del umbral")
+st.caption(
+    "D1 + D2 · Que umbral usa el DAG para disparar la alarma, y que hay "
+    "en las filas que quedan por fuera."
+)
 
 # ------------------------- D1 -------------------------
-st.header("D1 — El umbral del DAG (calibrado con evidencia)")
+st.subheader("Umbral del DAG")
 
 st.markdown(
-    """
-El DAG de U6 dispara la alarma cuando la tasa de rechazo supera un umbral.
-En clase pusimos un numero a dedo. Ahora tenemos 10 semanas de historia:
-podemos calcularlo.
-"""
+    "El DAG dispara alerta cuando la tasa de rechazo supera un umbral. "
+    "Con 10 semanas de historia podemos calibrarlo con evidencia en vez "
+    "de fijar el numero a dedo."
 )
 
 col1, col2 = st.columns(2)

@@ -12,17 +12,30 @@ with open(ROOT / "analysis" / "hallazgos_u6.json") as f:
     H = json.load(f)
 b = H["D5_banco_pago"]
 
-st.title(":bank: D5 — La columna nueva `BancoPago`")
+
+st.set_page_config(layout="wide")
+st.markdown("""<style>
+.block-container {padding-top: 2.5rem; padding-bottom: 3rem; max-width: 1100px;}
+h1 {font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.25rem;}
+h2 {font-weight: 600; letter-spacing: -0.01em; margin-top: 2rem;}
+h3 {font-weight: 600; margin-top: 1.5rem;}
+[data-testid="stMetricLabel"] {font-size: 0.8rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em;}
+[data-testid="stMetricValue"] {font-size: 1.8rem; font-weight: 600;}
+footer, [data-testid="stDecoration"] {display: none;}
+</style>""", unsafe_allow_html=True)
+
+st.title("Columna nueva: BancoPago")
+st.caption(
+    "D5 · Que hacer con un campo que llega en el CSV pero el modelo "
+    "no conoce, y que ademas viene con captura parcial."
+)
 
 st.markdown(
-    """
-El cliente avisa: *"desde hace unas semanas empezamos a capturar el banco desde
-el cual nos pagan. Es un campo nuevo, asi que en los primeros envios viene vacio
-y aparece a partir de cierta fecha. Sabemos que la captura no ha sido perfecta."*
-
-Hay que decidir que hacer con esta columna. **No hay una respuesta correcta —
-hay decisiones defendibles y decisiones improvisadas.**
-"""
+    "> *\"Desde hace unas semanas empezamos a capturar el banco desde el "
+    "cual nos pagan. Es un campo nuevo, asi que en los primeros envios "
+    "viene vacio y aparece a partir de cierta fecha. Sabemos que la "
+    "captura no ha sido perfecta.\"*\n\n"
+    "— Direccion de Retencion, correo del 2026-09-14"
 )
 
 col1, col2, col3 = st.columns(3)
