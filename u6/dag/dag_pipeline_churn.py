@@ -230,61 +230,62 @@ def pipeline_mlops_churn():
 
     @task
     def cargar_a_bq(scored: dict) -> dict:
-        """Sube resultados y cuarentena a BigQuery (append idempotente por run_id)."""
+        """Sube resultados y cuarentena a BigQuery via streaming inserts.
+
+        Usa `insert_rows_json` en vez de `load_table_from_file` para no requerir
+        `bigquery.jobs.create` (permiso que Cloud Shell users no siempre tienen
+        en proyectos academicos). Los streaming inserts solo requieren
+        `bigquery.tables.updateData` que el owner del dataset ya tiene.
+        """
+        from datetime import datetime as _dt, timezone as _tz
         from google.cloud import bigquery
 
         client = bigquery.Client(project=BQ_PROJECT)
+        extra = {
+            "run_id": scored["run_id"],
+            "archivo": scored["archivo"],
+            "loaded_at": _dt.now(_tz.utc).isoformat(),
+        }
 
-        # Enriquece cada fila con run_id + archivo antes de subir
-        def _enrich(path_in: str, columnas_extra: dict) -> str:
-            path_out = path_in + ".enriched.jsonl"
-            with open(path_in) as fin, open(path_out, "w") as fout:
-                for line in fin:
+        def _leer_jsonl(path: str) -> list[dict]:
+            if not os.path.exists(path) or os.path.getsize(path) == 0:
+                return []
+            rows = []
+            with open(path) as f:
+                for line in f:
                     obj = json.loads(line)
-                    obj.update(columnas_extra)
-                    fout.write(json.dumps(obj) + "\n")
-            return path_out
-
-        extra = {"run_id": scored["run_id"], "archivo": scored["archivo"]}
+                    obj.update(extra)
+                    rows.append(obj)
+            return rows
 
         # ---- resultados ----
-        res_path = _enrich(f"/tmp/u6_out/{scored['run_id']}_res.jsonl", extra)
-        if os.path.getsize(res_path) > 0:
-            job = client.load_table_from_uri(
-                None,  # placeholder — usaremos file API
-                f"{BQ_PROJECT}.{BQ_DATASET}.resultados",
-                job_config=None,
-            ) if False else None
-            # Con file API (mas simple para JSONL):
-            with open(res_path, "rb") as f:
-                job_config = bigquery.LoadJobConfig(
-                    source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
-                    write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
-                    schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
-                    autodetect=False,
-                )
-                job = client.load_table_from_file(
-                    f, f"{BQ_PROJECT}.{BQ_DATASET}.resultados",
-                    job_config=job_config,
-                )
-            job.result()
-            print(f"[cargar_a_bq] resultados: cargadas {job.output_rows} filas")
+        res_rows = _leer_jsonl(f"/tmp/u6_out/{scored['run_id']}_res.jsonl")
+        if res_rows:
+            errors = client.insert_rows_json(
+                f"{BQ_PROJECT}.{BQ_DATASET}.resultados", res_rows
+            )
+            if errors:
+                raise ValueError(f"BQ streaming errors (resultados): {errors[:3]}")
+            print(f"[cargar_a_bq] resultados: {len(res_rows)} filas via streaming")
 
         # ---- cuarentena ----
-        cur_path = _enrich(f"/tmp/u6_out/{scored['run_id']}_cur.jsonl", extra)
-        if os.path.getsize(cur_path) > 0:
-            with open(cur_path, "rb") as f:
-                job_config = bigquery.LoadJobConfig(
-                    source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
-                    write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
-                    autodetect=False,
-                )
-                job = client.load_table_from_file(
-                    f, f"{BQ_PROJECT}.{BQ_DATASET}.cuarentena",
-                    job_config=job_config,
-                )
-            job.result()
-            print(f"[cargar_a_bq] cuarentena: cargadas {job.output_rows} filas")
+        cur_extra = {"run_id": scored["run_id"], "archivo": scored["archivo"],
+                     "quarantined_at": _dt.now(_tz.utc).isoformat()}
+        cur_rows = []
+        cur_path = f"/tmp/u6_out/{scored['run_id']}_cur.jsonl"
+        if os.path.exists(cur_path) and os.path.getsize(cur_path) > 0:
+            with open(cur_path) as f:
+                for line in f:
+                    obj = json.loads(line)
+                    obj.update(cur_extra)
+                    cur_rows.append(obj)
+        if cur_rows:
+            errors = client.insert_rows_json(
+                f"{BQ_PROJECT}.{BQ_DATASET}.cuarentena", cur_rows
+            )
+            if errors:
+                raise ValueError(f"BQ streaming errors (cuarentena): {errors[:3]}")
+            print(f"[cargar_a_bq] cuarentena: {len(cur_rows)} filas via streaming")
 
         return scored
 
