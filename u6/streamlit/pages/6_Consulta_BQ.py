@@ -1,7 +1,7 @@
 """Consulta BigQuery — resultados y cuarentena escritos por el DAG.
 
 Alineado con el patron de la guia de clase: el DAG carga a
-`u6_g02_mlops_churn.resultados` y `u6_g02_mlops_churn.cuarentena`.
+`u6_g02_data_20260919.resultados` y `u6_g02_data_20260919.cuarentena`.
 Esta pagina las lee y muestra las metricas por run.
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ que la profesora pidio dejar activa hasta el viernes 25.
 )
 
 PROJECT = os.getenv("BQ_PROJECT", "computacionnube20262")
-DATASET = os.getenv("BQ_DATASET", "u6_g02_mlops_churn")
+DATASET = os.getenv("BQ_DATASET", "u6_g02_data_20260919")
 
 with st.sidebar:
     st.text_input("BQ Project", value=PROJECT, key="bq_project")

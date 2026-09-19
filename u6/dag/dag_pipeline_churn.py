@@ -31,8 +31,8 @@ from airflow.exceptions import AirflowSkipException
 
 # Configuracion via env vars (Cloud Shell / Workbench)
 API_URL = os.getenv("API_URL", "https://TU_SERVICE_URL/predict")
-GCS_BUCKET = os.getenv("GCS_BUCKET", "computacionnube20262-u6-g02-batches-20260919")
-BQ_DATASET = os.getenv("BQ_DATASET", "u6_g02_mlops_churn")
+GCS_BUCKET = os.getenv("GCS_BUCKET", "u6-g02-bucket-20260919")
+BQ_DATASET = os.getenv("BQ_DATASET", "u6_g02_data_20260919")
 BQ_PROJECT = os.getenv("BQ_PROJECT", "computacionnube20262")
 UMBRAL_CUARENTENA_PCT = float(os.getenv("UMBRAL_CUARENTENA_PCT", "2.5"))
 UMBRAL_DRIFT_QUALITY_GATE_PCT = float(os.getenv("UMBRAL_DRIFT_QUALITY_GATE_PCT", "50.0"))

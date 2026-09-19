@@ -1,23 +1,29 @@
+-- ============================================================================
+-- Grupo 2 - Gabriel Escobar, David Artunduaga, Luis Rojas
+-- Curso: Computación en la Nube para IA — Profesora: Diana Jaimes
+-- Unidad 6 — Trabajo final: monitoreo del pipeline de retencion en produccion
+-- ============================================================================
+
 -- DDL para las tablas del pipeline U6 (Grupo 2).
 -- Alineado con el patron de la guia de clase: 1 tabla `resultados`
 -- (predicciones OK) + 1 tabla `cuarentena` (rechazos 422).
 --
 -- Nomenclatura por Pautas GCP (guion bajo para BQ):
---   dataset: u6_g02_mlops_churn
+--   dataset: u6_g02_data_20260919
 --   tablas: resultados, cuarentena
 --
 -- Ubicacion: us-central1
 -- Ejecutar con:
---   bq query --use_legacy_sql=false --location=us-central1 < bigquery_ddl.sql
+--   bq query --use_legacy_sql=false --location=us-central1 < u6-g02-sql-20260919.sql
 
-CREATE SCHEMA IF NOT EXISTS `u6_g02_mlops_churn`
+CREATE SCHEMA IF NOT EXISTS `u6_g02_data_20260919`
   OPTIONS(location = "us-central1",
           description = "Trabajo final U6 - Grupo 2 - Monitoreo pipeline churn");
 
 -- ============================================================================
 -- Tabla resultados: predicciones exitosas (200 desde el API)
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS `u6_g02_mlops_churn.resultados` (
+CREATE TABLE IF NOT EXISTS `u6_g02_data_20260919.resultados` (
   run_id STRING NOT NULL OPTIONS(description = "batch_id ISO del DAG run"),
   archivo STRING NOT NULL OPTIONS(description = "nombre del CSV procesado"),
   customer_id STRING NOT NULL,
@@ -36,7 +42,7 @@ CLUSTER BY archivo, fecha_lote;
 -- ============================================================================
 -- Tabla cuarentena: filas rechazadas por el API (422) o fallo local
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS `u6_g02_mlops_churn.cuarentena` (
+CREATE TABLE IF NOT EXISTS `u6_g02_data_20260919.cuarentena` (
   run_id STRING NOT NULL,
   archivo STRING NOT NULL,
   customer_id STRING,
@@ -53,16 +59,16 @@ CLUSTER BY archivo, error_type;
 -- ============================================================================
 -- Vista: metricas por corrida
 -- ============================================================================
-CREATE OR REPLACE VIEW `u6_g02_mlops_churn.v_metricas_por_run` AS
+CREATE OR REPLACE VIEW `u6_g02_data_20260919.v_metricas_por_run` AS
 SELECT
   r.run_id,
   r.archivo,
   r.fecha_lote,
   COUNTIF(TRUE) AS n_ok,
-  (SELECT COUNT(*) FROM `u6_g02_mlops_churn.cuarentena` q
+  (SELECT COUNT(*) FROM `u6_g02_data_20260919.cuarentena` q
      WHERE q.run_id = r.run_id AND q.archivo = r.archivo) AS n_cuarentena,
   AVG(r.customer_risk_score) AS avg_risk,
   COUNTIF(r.predicted_churn) AS n_marca_churn
-FROM `u6_g02_mlops_churn.resultados` r
+FROM `u6_g02_data_20260919.resultados` r
 GROUP BY r.run_id, r.archivo, r.fecha_lote
 ORDER BY r.fecha_lote, r.run_id;

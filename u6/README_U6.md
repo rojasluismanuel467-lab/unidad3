@@ -18,7 +18,7 @@ u6/
 │   └── hallazgos_u6.json              # salida consumida por el Streamlit
 ├── dag/
 │   ├── dag_pipeline_churn.py          # DAG Airflow 3.3.2 (patrón de la clase)
-│   └── bigquery_ddl.sql               # DDL de dataset u6_g02_mlops_churn
+│   └── u6-g02-sql-20260919.sql               # DDL de dataset u6_g02_data_20260919
 ├── scripts/
 │   └── run_batch.py                   # script batch alternativo (sin Airflow)
 └── streamlit/
@@ -87,20 +87,20 @@ curl -s -X POST "$API_URL" \
 ### 4. Crear bucket y subir el CSV del cliente
 
 ```bash
-gcloud storage buckets create gs://computacionnube20262-u6-g02-batches-20260919 \
+gcloud storage buckets create gs://u6-g02-bucket-20260919 \
   --location=us-central1 --uniform-bucket-level-access
 
 gcloud storage cp u6/data/lotes_retencion_u6.csv \
-  gs://computacionnube20262-u6-g02-batches-20260919/input/
+  gs://u6-g02-bucket-20260919/input/
 ```
 
 ### 5. Crear dataset y tablas en BigQuery
 
 ```bash
 bq query --use_legacy_sql=false --location=us-central1 \
-  < u6/dag/bigquery_ddl.sql
+  < u6/dag/u6-g02-sql-20260919.sql
 
-bq ls u6_g02_mlops_churn
+bq ls u6_g02_data_20260919
 # Deben aparecer: resultados, cuarentena, v_metricas_por_run
 ```
 
@@ -132,9 +132,9 @@ cp u6/dag/dag_pipeline_churn.py ~/airflow/dags/
 
 # Exporta las variables que el DAG necesita
 export API_URL="<tu URL de la API U5>/predict"
-export GCS_BUCKET="computacionnube20262-u6-g02-batches-20260919"
+export GCS_BUCKET="u6-g02-bucket-20260919"
 export BQ_PROJECT="computacionnube20262"
-export BQ_DATASET="u6_g02_mlops_churn"
+export BQ_DATASET="u6_g02_data_20260919"
 
 apache-airflow dags reserialize
 apache-airflow dags list
@@ -169,7 +169,7 @@ cd u6/streamlit
 pip install -r requirements.txt
 export CLOUD_RUN_URL="$API_URL"  # sin /predict
 export BQ_PROJECT="computacionnube20262"
-export BQ_DATASET="u6_g02_mlops_churn"
+export BQ_DATASET="u6_g02_data_20260919"
 streamlit run app.py --server.port 8501 --server.enableCORS=false \
   --server.enableXsrfProtection=false
 ```
@@ -182,28 +182,28 @@ export PROJECT_ID=computacionnube20262
 
 # Build (context = u6/ para copiar analysis/ y data/ sin symlinks)
 docker build \
-  -t us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260914/u6-g02-streamlit-20260919:v1 \
+  -t us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260914/u6-g02-img-20260919:v1 \
   -f streamlit/Dockerfile .
 
-docker push us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260914/u6-g02-streamlit-20260919:v1
+docker push us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260914/u6-g02-img-20260919:v1
 
-gcloud run deploy u6-g02-streamlit-20260919 \
-  --image=us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260914/u6-g02-streamlit-20260919:v1 \
+gcloud run deploy u6-g02-cr-20260919 \
+  --image=us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260914/u6-g02-img-20260919:v1 \
   --region=us-central1 \
   --no-allow-unauthenticated \
   --service-account=u5-g02-sa-20260914@${PROJECT_ID}.iam.gserviceaccount.com \
   --min-instances=0 --max-instances=1 --memory=512Mi --port=8501 \
-  --set-env-vars="CLOUD_RUN_URL=${API_URL%/predict},BQ_PROJECT=${PROJECT_ID},BQ_DATASET=u6_g02_mlops_churn"
+  --set-env-vars="CLOUD_RUN_URL=${API_URL%/predict},BQ_PROJECT=${PROJECT_ID},BQ_DATASET=u6_g02_data_20260919"
 ```
 
 Recuerda darle a la SA (`u5-g02-sa-20260914`) el rol `roles/bigquery.dataViewer`
-sobre el dataset `u6_g02_mlops_churn` para que el Streamlit pueda leer las
+sobre el dataset `u6_g02_data_20260919` para que el Streamlit pueda leer las
 tablas.
 
 ### 12. Limpieza (solo cuando cierre el ciclo, viernes 25)
 
 ```bash
-gcloud run services delete u6-g02-streamlit-20260919 --region=us-central1 --quiet
+gcloud run services delete u6-g02-cr-20260919 --region=us-central1 --quiet
 ```
 
 **NO borrar** (según la guía y las Pautas):
