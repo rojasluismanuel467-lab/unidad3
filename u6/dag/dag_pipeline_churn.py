@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -42,10 +43,18 @@ UMBRAL_DRIFT_QUALITY_GATE_PCT = float(os.getenv("UMBRAL_DRIFT_QUALITY_GATE_PCT",
 # Helpers (import diferidos para evitar romper el parseo del DAG)
 # ---------------------------------------------------------------------------
 def _fetch_id_token(audience: str) -> str:
-    import google.auth.transport.requests
-    from google.oauth2 import id_token
-    auth_req = google.auth.transport.requests.Request()
-    return id_token.fetch_id_token(auth_req, audience)
+    """ID token via gcloud CLI (evita ADC + serviceusage.services.use).
+
+    En proyectos academicos compartidos el usuario NO tiene
+    serviceusage.services.use, por lo que el SDK Python de google-cloud-*
+    falla al llamar cualquier API. gcloud CLI usa un flujo diferente
+    (metadata server / stored creds) que no requiere ese permiso.
+    """
+    result = subprocess.run(
+        ["gcloud", "auth", "print-identity-token", f"--audiences={audience}"],
+        check=True, capture_output=True, text=True,
+    )
+    return result.stdout.strip()
 
 
 def _yn(v):
@@ -120,9 +129,13 @@ def pipeline_mlops_churn():
 
     @task
     def leer_de_bucket(**context) -> dict:
-        """Lee el CSV desde gs://{GCS_BUCKET}/input/{archivo}."""
+        """Lee el CSV desde gs://{GCS_BUCKET}/input/{archivo} via gcloud CLI.
+
+        Usa `gcloud storage cp` (subprocess) en vez del SDK Python para
+        esquivar la exigencia de serviceusage.services.use, que en el
+        proyecto compartido del curso solo tiene el owner (profesora).
+        """
         import pandas as pd
-        from google.cloud import storage
 
         archivo = context["dag_run"].conf.get("archivo", "")
         if not archivo:
@@ -131,12 +144,13 @@ def pipeline_mlops_churn():
                 "Ej: apache-airflow dags test pipeline_mlops_churn "
                 "--conf '{\"archivo\": \"lotes_retencion_u6.csv\"}'"
             )
-        client = storage.Client()
-        bucket = client.bucket(GCS_BUCKET)
-        blob = bucket.blob(f"input/{archivo}")
 
         tmp = f"/tmp/{archivo}"
-        blob.download_to_filename(tmp)
+        subprocess.run(
+            ["gcloud", "storage", "cp",
+             f"gs://{GCS_BUCKET}/input/{archivo}", tmp],
+            check=True, capture_output=True, text=True,
+        )
         df = pd.read_csv(tmp)
 
         run_id = f"{context['ts_nodash']}-{archivo.replace('.csv', '')}"
@@ -230,62 +244,62 @@ def pipeline_mlops_churn():
 
     @task
     def cargar_a_bq(scored: dict) -> dict:
-        """Sube resultados y cuarentena a BigQuery via streaming inserts.
+        """Sube resultados y cuarentena a BigQuery via `bq insert` (streaming).
 
-        Usa `insert_rows_json` en vez de `load_table_from_file` para no requerir
-        `bigquery.jobs.create` (permiso que Cloud Shell users no siempre tienen
-        en proyectos academicos). Los streaming inserts solo requieren
-        `bigquery.tables.updateData` que el owner del dataset ya tiene.
+        Usa `bq insert` (subprocess) en vez del SDK Python para evitar la
+        exigencia de serviceusage.services.use del SDK. `bq insert` hace
+        streaming inserts (no requiere bigquery.jobs.create) y usa gcloud
+        auth (no ADC), por lo que funciona en el proyecto compartido.
         """
         from datetime import datetime as _dt, timezone as _tz
-        from google.cloud import bigquery
 
-        client = bigquery.Client(project=BQ_PROJECT)
-        extra = {
-            "run_id": scored["run_id"],
-            "archivo": scored["archivo"],
-            "loaded_at": _dt.now(_tz.utc).isoformat(),
-        }
+        loaded_at = _dt.now(_tz.utc).isoformat()
 
-        def _leer_jsonl(path: str) -> list[dict]:
-            if not os.path.exists(path) or os.path.getsize(path) == 0:
-                return []
-            rows = []
-            with open(path) as f:
-                for line in f:
+        def _preparar_ndjson(path_in: str, extra: dict) -> str | None:
+            if not os.path.exists(path_in) or os.path.getsize(path_in) == 0:
+                return None
+            path_out = path_in.replace(".jsonl", "_bq.jsonl")
+            with open(path_in) as f_in, open(path_out, "w") as f_out:
+                for line in f_in:
                     obj = json.loads(line)
                     obj.update(extra)
-                    rows.append(obj)
-            return rows
+                    f_out.write(json.dumps(obj, default=str) + "\n")
+            return path_out
+
+        def _bq_insert(tabla: str, ndjson_path: str) -> None:
+            fq = f"{BQ_PROJECT}:{BQ_DATASET}.{tabla}"
+            with open(ndjson_path) as f:
+                result = subprocess.run(
+                    ["bq", "insert", fq],
+                    stdin=f, check=False, capture_output=True, text=True,
+                )
+            if result.returncode != 0:
+                raise ValueError(
+                    f"[bq insert] tabla={tabla} rc={result.returncode}\n"
+                    f"stderr={result.stderr[:1000]}\nstdout={result.stdout[:500]}"
+                )
 
         # ---- resultados ----
-        res_rows = _leer_jsonl(f"/tmp/u6_out/{scored['run_id']}_res.jsonl")
-        if res_rows:
-            errors = client.insert_rows_json(
-                f"{BQ_PROJECT}.{BQ_DATASET}.resultados", res_rows
-            )
-            if errors:
-                raise ValueError(f"BQ streaming errors (resultados): {errors[:3]}")
-            print(f"[cargar_a_bq] resultados: {len(res_rows)} filas via streaming")
+        res_extra = {"run_id": scored["run_id"], "archivo": scored["archivo"],
+                     "loaded_at": loaded_at}
+        res_path = _preparar_ndjson(
+            f"/tmp/u6_out/{scored['run_id']}_res.jsonl", res_extra
+        )
+        if res_path:
+            _bq_insert("resultados", res_path)
+            n_res = sum(1 for _ in open(res_path))
+            print(f"[cargar_a_bq] resultados: {n_res} filas via bq insert")
 
         # ---- cuarentena ----
         cur_extra = {"run_id": scored["run_id"], "archivo": scored["archivo"],
-                     "quarantined_at": _dt.now(_tz.utc).isoformat()}
-        cur_rows = []
-        cur_path = f"/tmp/u6_out/{scored['run_id']}_cur.jsonl"
-        if os.path.exists(cur_path) and os.path.getsize(cur_path) > 0:
-            with open(cur_path) as f:
-                for line in f:
-                    obj = json.loads(line)
-                    obj.update(cur_extra)
-                    cur_rows.append(obj)
-        if cur_rows:
-            errors = client.insert_rows_json(
-                f"{BQ_PROJECT}.{BQ_DATASET}.cuarentena", cur_rows
-            )
-            if errors:
-                raise ValueError(f"BQ streaming errors (cuarentena): {errors[:3]}")
-            print(f"[cargar_a_bq] cuarentena: {len(cur_rows)} filas via streaming")
+                     "quarantined_at": loaded_at}
+        cur_path = _preparar_ndjson(
+            f"/tmp/u6_out/{scored['run_id']}_cur.jsonl", cur_extra
+        )
+        if cur_path:
+            _bq_insert("cuarentena", cur_path)
+            n_cur = sum(1 for _ in open(cur_path))
+            print(f"[cargar_a_bq] cuarentena: {n_cur} filas via bq insert")
 
         return scored
 
