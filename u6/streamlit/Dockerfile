@@ -17,9 +17,11 @@ WORKDIR /app
 COPY streamlit/requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# App + paginas
+# App + paginas + modulo compartido de design tokens
 COPY streamlit/app.py .
+COPY streamlit/_shared.py .
 COPY streamlit/pages/ ./pages/
+COPY streamlit/.streamlit/ ./.streamlit/
 
 # Datos y hallazgos precalculados (los symlinks en dev apuntan aca)
 COPY analysis/hallazgos_u6.json ./analysis/hallazgos_u6.json
@@ -27,9 +29,13 @@ COPY data/lotes_retencion_u6.csv ./data/lotes_retencion_u6.csv
 
 EXPOSE 8501
 
-# Streamlit: --server.address 0.0.0.0 obligatorio para Cloud Run
+# Streamlit: --server.address 0.0.0.0 obligatorio para Cloud Run.
+# enableCORS/XSRF=false son necesarios para que WebSocket funcione detras de
+# los proxies con dominio distinto (Cloud Shell preview, Cloud Run).
 CMD exec streamlit run app.py \
     --server.port ${PORT} \
     --server.address 0.0.0.0 \
     --server.headless true \
+    --server.enableCORS false \
+    --server.enableXsrfProtection false \
     --browser.gatherUsageStats false

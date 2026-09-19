@@ -6,7 +6,7 @@ falla al inicializar el cliente. El CLI `bq` usa gcloud auth y no pasa por
 ese check, por lo que se usa `bq head --format=json` via subprocess.
 
 Las agregaciones (COUNT, GROUP BY) se hacen en pandas despues de traer las
-filas — mucho mas simple y sin necesidad de `bigquery.jobs.create`.
+filas — mas simple y sin necesidad de `bigquery.jobs.create`.
 """
 from __future__ import annotations
 
@@ -14,27 +14,23 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _shared import apply_page_config, sidebar_branding, page_header, kpi_row, footer
 
-st.set_page_config(layout="wide")
-st.markdown("""<style>
-.block-container {padding-top: 2.5rem; padding-bottom: 3rem; max-width: 1100px;}
-h1 {font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.25rem;}
-h2 {font-weight: 600; letter-spacing: -0.01em; margin-top: 2rem;}
-h3 {font-weight: 600; margin-top: 1.5rem;}
-[data-testid="stMetricLabel"] {font-size: 0.8rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em;}
-[data-testid="stMetricValue"] {font-size: 1.8rem; font-weight: 600;}
-footer, [data-testid="stDecoration"] {display: none;}
-</style>""", unsafe_allow_html=True)
+apply_page_config(page_title="Consulta BQ · Monitor U6")
+sidebar_branding()
 
-st.title("Consulta BigQuery")
-st.caption(
-    "Tablas `resultados` y `cuarentena` cargadas por el DAG "
-    "`pipeline_mlops_churn`. Cada corrida deja un `run_id` unico."
+page_header(
+    "Consulta BigQuery",
+    "Tablas `resultados` y `cuarentena` que carga el DAG `pipeline_mlops_churn`. "
+    "Cada corrida deja un `run_id` unico.",
+    directriz="Datos en la nube",
 )
 
 PROJECT = os.getenv("BQ_PROJECT", "computacionnube20262")
@@ -44,7 +40,7 @@ with st.sidebar:
     st.text_input("BQ Project", value=PROJECT, key="bq_project")
     st.text_input("BQ Dataset", value=DATASET, key="bq_dataset")
     max_rows = st.number_input(
-        "Filas a traer (max por tabla)", min_value=100, max_value=10000,
+        "Filas por tabla", min_value=100, max_value=10000,
         value=2000, step=500,
     )
 
@@ -64,7 +60,7 @@ def _bq_head(tabla: str, n: int) -> pd.DataFrame:
         )
     fq = f"{project}:{dataset}.{tabla}"
     result = subprocess.run(
-        ["bq", "head", f"--format=json", f"-n{n}", fq],
+        ["bq", "head", "--format=json", f"-n{n}", fq],
         capture_output=True, text=True, timeout=60,
     )
     if result.returncode != 0:
@@ -78,37 +74,52 @@ def _bq_head(tabla: str, n: int) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # Fetch
 # ---------------------------------------------------------------------------
-col_status_1, col_status_2 = st.columns(2)
+error_res = error_cur = None
 
-with st.spinner("Trayendo `resultados` desde BigQuery..."):
+with st.spinner("Trayendo `resultados`..."):
     try:
         df_res = _bq_head("resultados", max_rows)
-        col_status_1.metric("Filas en `resultados`", f"{len(df_res):,}")
     except Exception as e:
-        col_status_1.error(f"No se pudo leer `resultados`: {e}")
         df_res = pd.DataFrame()
+        error_res = str(e)
 
-with st.spinner("Trayendo `cuarentena` desde BigQuery..."):
+with st.spinner("Trayendo `cuarentena`..."):
     try:
         df_cur = _bq_head("cuarentena", max_rows)
-        col_status_2.metric("Filas en `cuarentena`", f"{len(df_cur):,}")
     except Exception as e:
-        col_status_2.error(f"No se pudo leer `cuarentena`: {e}")
         df_cur = pd.DataFrame()
+        error_cur = str(e)
+
+kpi_row([
+    ("Filas en resultados", f"{len(df_res):,}",
+     "Predicciones OK cargadas en BQ (limite: N filas del sidebar)"),
+    ("Filas en cuarentena", f"{len(df_cur):,}",
+     "Rechazos por 422/network/parse cargados en BQ"),
+    ("Proyecto", project, None),
+    ("Dataset", dataset, None),
+])
+
+if error_res:
+    st.error(f"No se pudo leer `resultados`.  \n`{error_res}`")
+if error_cur:
+    st.error(f"No se pudo leer `cuarentena`.  \n`{error_cur}`")
 
 if df_res.empty and df_cur.empty:
     st.stop()
 
 # ---------------------------------------------------------------------------
-# Metricas por corrida
+# Corridas del DAG
 # ---------------------------------------------------------------------------
-st.subheader("Corridas del DAG")
+st.header("Corridas del DAG")
+st.caption("Una fila por `run_id`. Ordenadas por corrida mas reciente primero.")
 
 if not df_res.empty:
     df_res["customer_risk_score"] = pd.to_numeric(
         df_res["customer_risk_score"], errors="coerce"
     )
-    df_res["predicted_churn"] = df_res["predicted_churn"].astype(str).str.lower() == "true"
+    df_res["predicted_churn"] = (
+        df_res["predicted_churn"].astype(str).str.lower() == "true"
+    )
     agg_res = (
         df_res.groupby(["run_id", "archivo"], as_index=False)
         .agg(
@@ -118,7 +129,9 @@ if not df_res.empty:
         )
     )
 else:
-    agg_res = pd.DataFrame(columns=["run_id", "archivo", "n_ok", "avg_risk", "n_marca_churn"])
+    agg_res = pd.DataFrame(
+        columns=["run_id", "archivo", "n_ok", "avg_risk", "n_marca_churn"]
+    )
 
 if not df_cur.empty:
     agg_cur = (
@@ -131,26 +144,35 @@ if not df_cur.empty:
         )
     )
 else:
-    agg_cur = pd.DataFrame(columns=["run_id", "archivo", "n_cuarentena",
-                                     "n_api_reject", "n_parse", "n_network"])
+    agg_cur = pd.DataFrame(
+        columns=["run_id", "archivo", "n_cuarentena",
+                 "n_api_reject", "n_parse", "n_network"]
+    )
 
 cruce = agg_res.merge(agg_cur, on=["run_id", "archivo"], how="outer").fillna(0)
-for c in ["n_ok", "n_cuarentena", "n_marca_churn", "n_api_reject", "n_parse", "n_network"]:
+for c in ["n_ok", "n_cuarentena", "n_marca_churn",
+          "n_api_reject", "n_parse", "n_network"]:
     if c in cruce.columns:
         cruce[c] = cruce[c].astype(int)
 cruce["n_total"] = cruce["n_ok"] + cruce["n_cuarentena"]
-cruce["tasa_rechazo_%"] = (
+cruce["tasa_rechazo_pct"] = (
     cruce["n_cuarentena"] / cruce["n_total"].replace(0, 1) * 100
 ).round(2)
 cruce = cruce.sort_values("run_id", ascending=False)
 
 st.dataframe(
     cruce[["run_id", "archivo", "n_total", "n_ok", "n_cuarentena",
-           "tasa_rechazo_%", "avg_risk", "n_marca_churn"]],
+           "tasa_rechazo_pct", "avg_risk", "n_marca_churn"]],
     use_container_width=True, hide_index=True,
     column_config={
-        "avg_risk": st.column_config.NumberColumn(format="%.3f"),
-        "tasa_rechazo_%": st.column_config.NumberColumn(format="%.1f %%"),
+        "n_total": st.column_config.NumberColumn("N total", format="%d"),
+        "n_ok": st.column_config.NumberColumn("N OK", format="%d"),
+        "n_cuarentena": st.column_config.NumberColumn("N cuarentena", format="%d"),
+        "avg_risk": st.column_config.NumberColumn("Risk promedio", format="%.3f"),
+        "tasa_rechazo_pct": st.column_config.NumberColumn(
+            "Rechazo", format="%.1f %%"),
+        "n_marca_churn": st.column_config.NumberColumn(
+            "N marca churn", format="%d"),
     },
 )
 
@@ -158,26 +180,25 @@ st.dataframe(
 # Detalle de errores
 # ---------------------------------------------------------------------------
 if not df_cur.empty:
-    st.subheader("Distribucion de errores en cuarentena")
+    st.header("Distribucion de errores en cuarentena")
     df_cur["http_status"] = pd.to_numeric(df_cur["http_status"], errors="coerce")
     err = (
         df_cur.groupby(["error_type", "http_status"], dropna=False, as_index=False)
         .agg(n=("customer_id", "count"))
         .sort_values("n", ascending=False)
     )
-    st.dataframe(err, use_container_width=True, hide_index=True)
+    st.dataframe(
+        err, use_container_width=True, hide_index=True,
+        column_config={"n": st.column_config.NumberColumn("N", format="%d")},
+    )
 
 # ---------------------------------------------------------------------------
-# Muestra cruda (util para depurar)
+# Muestra cruda
 # ---------------------------------------------------------------------------
-with st.expander("Muestra cruda de `resultados` (primeras 100 filas)"):
+with st.expander("Muestra cruda — `resultados` (100 filas)"):
     st.dataframe(df_res.head(100), use_container_width=True, hide_index=True)
 
-with st.expander("Muestra cruda de `cuarentena` (primeras 100 filas)"):
+with st.expander("Muestra cruda — `cuarentena` (100 filas)"):
     st.dataframe(df_cur.head(100), use_container_width=True, hide_index=True)
 
-st.caption(
-    f"Fuente: `{project}.{dataset}.{{resultados,cuarentena}}`. "
-    f"Lectura via `bq head --format=json` (evita serviceusage.services.use "
-    "que el proyecto compartido no otorga)."
-)
+footer(fuentes=[f"{project}.{dataset}.resultados", f"{project}.{dataset}.cuarentena"])
