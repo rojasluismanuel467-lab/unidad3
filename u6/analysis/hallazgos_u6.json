@@ -1,0 +1,728 @@
+{
+  "meta": {
+    "generado_en": "2026-09-19T17:55:35.059269+00:00",
+    "csv_filas": 703,
+    "csv_columnas": 22,
+    "semanas": [
+      "2026-06-29",
+      "2026-07-06",
+      "2026-07-13",
+      "2026-07-20",
+      "2026-07-27",
+      "2026-08-03",
+      "2026-08-10",
+      "2026-08-17",
+      "2026-08-24",
+      "2026-08-31"
+    ],
+    "n_semanas": 10
+  },
+  "D1_tasa_rechazo_por_semana": [
+    {
+      "fecha_lote": "2026-06-29",
+      "n_total": 50,
+      "n_validas": 49,
+      "n_rechazadas": 1,
+      "tasa_rechazo_pct": 2.0
+    },
+    {
+      "fecha_lote": "2026-07-06",
+      "n_total": 45,
+      "n_validas": 45,
+      "n_rechazadas": 0,
+      "tasa_rechazo_pct": 0.0
+    },
+    {
+      "fecha_lote": "2026-07-13",
+      "n_total": 81,
+      "n_validas": 81,
+      "n_rechazadas": 0,
+      "tasa_rechazo_pct": 0.0
+    },
+    {
+      "fecha_lote": "2026-07-20",
+      "n_total": 61,
+      "n_validas": 61,
+      "n_rechazadas": 0,
+      "tasa_rechazo_pct": 0.0
+    },
+    {
+      "fecha_lote": "2026-07-27",
+      "n_total": 96,
+      "n_validas": 95,
+      "n_rechazadas": 1,
+      "tasa_rechazo_pct": 1.04
+    },
+    {
+      "fecha_lote": "2026-08-03",
+      "n_total": 56,
+      "n_validas": 56,
+      "n_rechazadas": 0,
+      "tasa_rechazo_pct": 0.0
+    },
+    {
+      "fecha_lote": "2026-08-10",
+      "n_total": 86,
+      "n_validas": 85,
+      "n_rechazadas": 1,
+      "tasa_rechazo_pct": 1.16
+    },
+    {
+      "fecha_lote": "2026-08-17",
+      "n_total": 71,
+      "n_validas": 70,
+      "n_rechazadas": 1,
+      "tasa_rechazo_pct": 1.41
+    },
+    {
+      "fecha_lote": "2026-08-24",
+      "n_total": 91,
+      "n_validas": 74,
+      "n_rechazadas": 17,
+      "tasa_rechazo_pct": 18.68
+    },
+    {
+      "fecha_lote": "2026-08-31",
+      "n_total": 66,
+      "n_validas": 37,
+      "n_rechazadas": 29,
+      "tasa_rechazo_pct": 43.94
+    }
+  ],
+  "D1_agregado": {
+    "total": 703,
+    "validas": 653,
+    "rechazadas": 50,
+    "tasa_rechazo_pct": 7.11
+  },
+  "D1_calibracion_umbral": {
+    "primeras_4_semanas_media_rechazo_pct": 0.5,
+    "primeras_4_semanas_std": 1.0,
+    "umbral_2sigma_pct": 2.5,
+    "umbral_3sigma_pct": 3.5,
+    "recomendado_pct": 2.5,
+    "justificacion": "Umbral calculado desde las 4 primeras semanas (periodo baseline, sin banco_pago). Usamos media + 2\u03c3 (~95% de tolerancia) en vez de un valor arbitrario. Con 3\u03c3 (~99.7%) el umbral es m\u00e1s laxo.",
+    "semanas_que_disparan_2sigma": [
+      "2026-08-24",
+      "2026-08-31"
+    ],
+    "sensitivity": {
+      "si_umbral_es_5pct": 2,
+      "si_umbral_es_10pct": 2,
+      "si_umbral_es_20pct": 1
+    }
+  },
+  "D2_cuarentena": {
+    "total_errores": 55,
+    "por_campo": {
+      "PaymentMethod": 27,
+      "tenure": 21,
+      "MonthlyCharges": 7
+    },
+    "por_tipo": {
+      "enum": 27,
+      "range": 18,
+      "float_parsing_o_null": 7,
+      "int_parsing_o_null": 3
+    },
+    "evolucion_semanal": [
+      {
+        "semana": "2026-06-29",
+        "n_errores_totales": 1,
+        "top_campos": [
+          [
+            "MonthlyCharges",
+            1
+          ]
+        ]
+      },
+      {
+        "semana": "2026-07-06",
+        "n_errores_totales": 0,
+        "top_campos": []
+      },
+      {
+        "semana": "2026-07-13",
+        "n_errores_totales": 0,
+        "top_campos": []
+      },
+      {
+        "semana": "2026-07-20",
+        "n_errores_totales": 0,
+        "top_campos": []
+      },
+      {
+        "semana": "2026-07-27",
+        "n_errores_totales": 1,
+        "top_campos": [
+          [
+            "tenure",
+            1
+          ]
+        ]
+      },
+      {
+        "semana": "2026-08-03",
+        "n_errores_totales": 0,
+        "top_campos": []
+      },
+      {
+        "semana": "2026-08-10",
+        "n_errores_totales": 1,
+        "top_campos": [
+          [
+            "MonthlyCharges",
+            1
+          ]
+        ]
+      },
+      {
+        "semana": "2026-08-17",
+        "n_errores_totales": 1,
+        "top_campos": [
+          [
+            "MonthlyCharges",
+            1
+          ]
+        ]
+      },
+      {
+        "semana": "2026-08-24",
+        "n_errores_totales": 18,
+        "top_campos": [
+          [
+            "PaymentMethod",
+            10
+          ],
+          [
+            "tenure",
+            6
+          ],
+          [
+            "MonthlyCharges",
+            2
+          ]
+        ]
+      },
+      {
+        "semana": "2026-08-31",
+        "n_errores_totales": 33,
+        "top_campos": [
+          [
+            "PaymentMethod",
+            17
+          ],
+          [
+            "tenure",
+            14
+          ],
+          [
+            "MonthlyCharges",
+            2
+          ]
+        ]
+      }
+    ],
+    "insight_texto_crudo": "La cuarentena guarda el registro completo como string. Para agrupar por tipo de error hay que re-parsear cada fila manualmente. Ese re-parseo es exactamente el trabajo que la validaci\u00f3n pydantic ya hizo. Dise\u00f1o mejorable: guardar el objeto RequestValidationError.errors() serializado como JSON separado, no solo el texto crudo."
+  },
+  "D5_banco_pago": {
+    "primera_semana_con_datos": "2026-07-27",
+    "n_valores_no_nulos": 444,
+    "n_valores_nulos": 259,
+    "cobertura_por_semana": [
+      {
+        "fecha_lote": "2026-06-29",
+        "n": 50,
+        "con_banco": 0,
+        "cobertura_pct": 0.0
+      },
+      {
+        "fecha_lote": "2026-07-06",
+        "n": 45,
+        "con_banco": 0,
+        "cobertura_pct": 0.0
+      },
+      {
+        "fecha_lote": "2026-07-13",
+        "n": 81,
+        "con_banco": 0,
+        "cobertura_pct": 0.0
+      },
+      {
+        "fecha_lote": "2026-07-20",
+        "n": 61,
+        "con_banco": 0,
+        "cobertura_pct": 0.0
+      },
+      {
+        "fecha_lote": "2026-07-27",
+        "n": 96,
+        "con_banco": 90,
+        "cobertura_pct": 93.8
+      },
+      {
+        "fecha_lote": "2026-08-03",
+        "n": 56,
+        "con_banco": 51,
+        "cobertura_pct": 91.1
+      },
+      {
+        "fecha_lote": "2026-08-10",
+        "n": 86,
+        "con_banco": 85,
+        "cobertura_pct": 98.8
+      },
+      {
+        "fecha_lote": "2026-08-17",
+        "n": 71,
+        "con_banco": 66,
+        "cobertura_pct": 93.0
+      },
+      {
+        "fecha_lote": "2026-08-24",
+        "n": 91,
+        "con_banco": 87,
+        "cobertura_pct": 95.6
+      },
+      {
+        "fecha_lote": "2026-08-31",
+        "n": 66,
+        "con_banco": 65,
+        "cobertura_pct": 98.5
+      }
+    ],
+    "top_variantes_raw": {
+      "NaN": 259,
+      "Banco de Bogota": 78,
+      "Scotiabank": 72,
+      "BBVA": 68,
+      "Bancolombia": 68,
+      "Davivienda": 66,
+      "BCO BOGOTA": 19,
+      "Bancolombia S.A.": 15,
+      "davivienda": 14,
+      "bancolombia": 13,
+      "BANCOLOMBIA": 13,
+      "  BBVA ": 12,
+      "007": 6
+    },
+    "top_valores_canonicalizados": {
+      "NaN": 259,
+      "bancolombia": 109,
+      "banco de bogota": 97,
+      "bbva": 80,
+      "davivienda": 80,
+      "scotiabank": 72,
+      "007": 6
+    },
+    "n_variantes_originales": 12,
+    "n_variantes_despues_canon": 6,
+    "decision_defendible": "Estrategia: (a) NO usar BancoPago como feature del modelo, porque el modelo actual no la conoce y agregarla requiere re-entrenar. (b) S\u00cd canonicalizar los valores para uso operativo (dashboards, an\u00e1lisis). El mapeo reduce las variantes de 12 a 6. (c) Reportar al cliente que la captura mejor\u00f3 desde 2026-07-27 pero requiere gobierno de datos (validaci\u00f3n en el CRM)."
+  },
+  "D3_D4_drift": {
+    "features_numericas": [
+      "tenure",
+      "MonthlyCharges"
+    ],
+    "vs_training_U4": {
+      "tenure": [
+        {
+          "semana": "2026-06-29",
+          "n": 50,
+          "psi": 1.6333,
+          "ks_stat": 0.17,
+          "ks_pvalue": 0.10098
+        },
+        {
+          "semana": "2026-07-06",
+          "n": 45,
+          "psi": 1.5908,
+          "ks_stat": 0.2394,
+          "ks_pvalue": 0.009767
+        },
+        {
+          "semana": "2026-07-13",
+          "n": 81,
+          "psi": 1.7277,
+          "ks_stat": 0.1972,
+          "ks_pvalue": 0.003388
+        },
+        {
+          "semana": "2026-07-20",
+          "n": 61,
+          "psi": 0.4535,
+          "ks_stat": 0.1429,
+          "ks_pvalue": 0.153837
+        },
+        {
+          "semana": "2026-07-27",
+          "n": 95,
+          "psi": 1.7451,
+          "ks_stat": 0.1974,
+          "ks_pvalue": 0.001147
+        },
+        {
+          "semana": "2026-08-03",
+          "n": 56,
+          "psi": 1.7374,
+          "ks_stat": 0.2077,
+          "ks_pvalue": 0.01414
+        },
+        {
+          "semana": "2026-08-10",
+          "n": 86,
+          "psi": 1.7813,
+          "ks_stat": 0.2885,
+          "ks_pvalue": 1e-06
+        },
+        {
+          "semana": "2026-08-17",
+          "n": 71,
+          "psi": 3.9321,
+          "ks_stat": 0.4584,
+          "ks_pvalue": 0.0
+        },
+        {
+          "semana": "2026-08-24",
+          "n": 91,
+          "psi": 5.0359,
+          "ks_stat": 0.5654,
+          "ks_pvalue": 0.0
+        },
+        {
+          "semana": "2026-08-31",
+          "n": 64,
+          "psi": 8.1601,
+          "ks_stat": 0.7648,
+          "ks_pvalue": 0.0
+        }
+      ],
+      "MonthlyCharges": [
+        {
+          "semana": "2026-06-29",
+          "n": 49,
+          "psi": 2.5847,
+          "ks_stat": 0.2008,
+          "ks_pvalue": 0.03423
+        },
+        {
+          "semana": "2026-07-06",
+          "n": 45,
+          "psi": 1.3917,
+          "ks_stat": 0.1829,
+          "ks_pvalue": 0.088463
+        },
+        {
+          "semana": "2026-07-13",
+          "n": 81,
+          "psi": 1.3723,
+          "ks_stat": 0.1111,
+          "ks_pvalue": 0.257861
+        },
+        {
+          "semana": "2026-07-20",
+          "n": 61,
+          "psi": 1.6816,
+          "ks_stat": 0.1605,
+          "ks_pvalue": 0.079612
+        },
+        {
+          "semana": "2026-07-27",
+          "n": 96,
+          "psi": 1.4079,
+          "ks_stat": 0.1326,
+          "ks_pvalue": 0.065951
+        },
+        {
+          "semana": "2026-08-03",
+          "n": 56,
+          "psi": 1.4772,
+          "ks_stat": 0.1381,
+          "ks_pvalue": 0.219546
+        },
+        {
+          "semana": "2026-08-10",
+          "n": 85,
+          "psi": 1.2775,
+          "ks_stat": 0.1901,
+          "ks_pvalue": 0.004008
+        },
+        {
+          "semana": "2026-08-17",
+          "n": 70,
+          "psi": 1.5704,
+          "ks_stat": 0.3457,
+          "ks_pvalue": 0.0
+        },
+        {
+          "semana": "2026-08-24",
+          "n": 89,
+          "psi": 3.7503,
+          "ks_stat": 0.3927,
+          "ks_pvalue": 0.0
+        },
+        {
+          "semana": "2026-08-31",
+          "n": 64,
+          "psi": 5.0903,
+          "ks_stat": 0.6415,
+          "ks_pvalue": 0.0
+        }
+      ]
+    },
+    "vs_baseline_4_semanas": {
+      "tenure": [
+        {
+          "semana": "2026-06-29",
+          "n": 50,
+          "psi": 0.1132,
+          "ks_stat": 0.0661,
+          "ks_pvalue": 0.986993
+        },
+        {
+          "semana": "2026-07-06",
+          "n": 45,
+          "psi": 0.0912,
+          "ks_stat": 0.0925,
+          "ks_pvalue": 0.868651
+        },
+        {
+          "semana": "2026-07-13",
+          "n": 81,
+          "psi": 0.0871,
+          "ks_stat": 0.0531,
+          "ks_pvalue": 0.991068
+        },
+        {
+          "semana": "2026-07-20",
+          "n": 61,
+          "psi": 0.0733,
+          "ks_stat": 0.0784,
+          "ks_pvalue": 0.89865
+        },
+        {
+          "semana": "2026-07-27",
+          "n": 95,
+          "psi": 0.1705,
+          "ks_stat": 0.1042,
+          "ks_pvalue": 0.417849
+        },
+        {
+          "semana": "2026-08-03",
+          "n": 56,
+          "psi": 0.2783,
+          "ks_stat": 0.0863,
+          "ks_pvalue": 0.854472
+        },
+        {
+          "semana": "2026-08-10",
+          "n": 86,
+          "psi": 0.3619,
+          "ks_stat": 0.2704,
+          "ks_pvalue": 0.000145
+        },
+        {
+          "semana": "2026-08-17",
+          "n": 71,
+          "psi": 2.9324,
+          "ks_stat": 0.4162,
+          "ks_pvalue": 0.0
+        },
+        {
+          "semana": "2026-08-24",
+          "n": 91,
+          "psi": 4.5215,
+          "ks_stat": 0.6758,
+          "ks_pvalue": 0.0
+        },
+        {
+          "semana": "2026-08-31",
+          "n": 64,
+          "psi": 10.2171,
+          "ks_stat": 0.8747,
+          "ks_pvalue": 0.0
+        }
+      ],
+      "MonthlyCharges": [
+        {
+          "semana": "2026-06-29",
+          "n": 49,
+          "psi": 0.1949,
+          "ks_stat": 0.105,
+          "ks_pvalue": 0.716568
+        },
+        {
+          "semana": "2026-07-06",
+          "n": 45,
+          "psi": 0.1756,
+          "ks_stat": 0.0729,
+          "ks_pvalue": 0.977318
+        },
+        {
+          "semana": "2026-07-13",
+          "n": 81,
+          "psi": 0.0749,
+          "ks_stat": 0.0774,
+          "ks_pvalue": 0.828468
+        },
+        {
+          "semana": "2026-07-20",
+          "n": 61,
+          "psi": 0.0584,
+          "ks_stat": 0.0875,
+          "ks_pvalue": 0.814053
+        },
+        {
+          "semana": "2026-07-27",
+          "n": 96,
+          "psi": 0.2355,
+          "ks_stat": 0.0602,
+          "ks_pvalue": 0.949647
+        },
+        {
+          "semana": "2026-08-03",
+          "n": 56,
+          "psi": 0.0889,
+          "ks_stat": 0.0838,
+          "ks_pvalue": 0.877384
+        },
+        {
+          "semana": "2026-08-10",
+          "n": 85,
+          "psi": 0.1354,
+          "ks_stat": 0.1268,
+          "ks_pvalue": 0.242519
+        },
+        {
+          "semana": "2026-08-17",
+          "n": 70,
+          "psi": 1.0111,
+          "ks_stat": 0.4091,
+          "ks_pvalue": 0.0
+        },
+        {
+          "semana": "2026-08-24",
+          "n": 89,
+          "psi": 3.2689,
+          "ks_stat": 0.4527,
+          "ks_pvalue": 0.0
+        },
+        {
+          "semana": "2026-08-31",
+          "n": 64,
+          "psi": 6.0149,
+          "ks_stat": 0.6668,
+          "ks_pvalue": 0.0
+        }
+      ]
+    },
+    "chi2_contract_vs_training": [
+      {
+        "chi2": 11.023,
+        "pvalue": 0.00404,
+        "max_delta_pct": 23.06,
+        "semana": "2026-06-29"
+      },
+      {
+        "chi2": 6.572,
+        "pvalue": 0.037412,
+        "max_delta_pct": 15.88,
+        "semana": "2026-07-06"
+      },
+      {
+        "chi2": 15.557,
+        "pvalue": 0.000419,
+        "max_delta_pct": 21.73,
+        "semana": "2026-07-13"
+      },
+      {
+        "chi2": 19.878,
+        "pvalue": 4.8e-05,
+        "max_delta_pct": 25.55,
+        "semana": "2026-07-20"
+      },
+      {
+        "chi2": 10.687,
+        "pvalue": 0.004779,
+        "max_delta_pct": 15.48,
+        "semana": "2026-07-27"
+      },
+      {
+        "chi2": 1.88,
+        "pvalue": 0.390714,
+        "max_delta_pct": 8.63,
+        "semana": "2026-08-03"
+      },
+      {
+        "chi2": 26.394,
+        "pvalue": 2e-06,
+        "max_delta_pct": 27.15,
+        "semana": "2026-08-10"
+      },
+      {
+        "chi2": 11.008,
+        "pvalue": 0.004069,
+        "max_delta_pct": 18.44,
+        "semana": "2026-08-17"
+      },
+      {
+        "chi2": 12.993,
+        "pvalue": 0.001509,
+        "max_delta_pct": 18.79,
+        "semana": "2026-08-24"
+      },
+      {
+        "chi2": 6.583,
+        "pvalue": 0.037193,
+        "max_delta_pct": 15.66,
+        "semana": "2026-08-31"
+      }
+    ],
+    "umbrales_referencia": {
+      "psi_leve": 0.1,
+      "psi_material": 0.25,
+      "ks_pvalue_alerta": 0.05,
+      "justificacion_psi_material_0.25": "Est\u00e1ndar del EMP (Verbraken 2013) y de la industria: PSI > 0.25 es drift material que amerita retraining. PSI 0.10-0.25 es leve, monitorear."
+    },
+    "hallazgo_principal": "El drift vs training (U4) NO coincide con el drift vs las primeras 4 semanas del CSV. La lectura correcta es: los datos de hoy se parecen menos al training que hace dos meses. Esto sugiere que la POBLACI\u00d3N cambi\u00f3 (no solo un ruido de captura). Es el hallazgo que responde D3."
+  },
+  "D6_respuesta_cliente": {
+    "que_paso": {
+      "titular": "El modelo NO se rompi\u00f3. La POBLACI\u00d3N cambi\u00f3 y el pipeline lo detect\u00f3. Los rechazos y el drift est\u00e1n correlacionados con los cambios que el CRM introdujo en producci\u00f3n.",
+      "evidencia_1_valores_nuevos_paymentmethod": "Desde 2026-08-24 el CRM empez\u00f3 a mandar valores de PaymentMethod que no existen en el enum del contrato del modelo: PSE, PayPal, Digital wallet, Corporate billing, Credit card (manual). Esto explica el 49% de los rechazos (27 de 55).",
+      "evidencia_1_detalle_por_semana": {
+        "2026-08-24 :: PSE": 3,
+        "2026-08-24 :: Corporate billing": 3,
+        "2026-08-24 :: Digital wallet": 2,
+        "2026-08-24 :: Credit card (manual)": 1,
+        "2026-08-24 :: PayPal": 1,
+        "2026-08-31 :: PayPal": 6,
+        "2026-08-31 :: Corporate billing": 3,
+        "2026-08-31 :: PSE": 3,
+        "2026-08-31 :: Digital wallet": 3,
+        "2026-08-31 :: Credit card (manual)": 2
+      },
+      "evidencia_2_drift_material_tenure": "El PSI de `tenure` vs el training se dispara de ~1.7 (estable) a 5.0 y 8.2 en las \u00faltimas 2 semanas. Umbral de referencia: PSI > 0.25 es drift material. Estamos 30x arriba.",
+      "evidencia_3_drift_material_monthlycharges": "PSI de `MonthlyCharges`: 1.4 \u2192 3.7 \u2192 5.1 en las \u00faltimas 3 semanas. Tambi\u00e9n drift material inequ\u00edvoco.",
+      "evidencia_4_contract_estable": "La distribuci\u00f3n de Contract NO cambi\u00f3 materialmente (chi2 fluct\u00faa pero no crece). No todas las features driftan \u2014 es un shift dirigido, no ruido.",
+      "evidencia_5_tasa_rechazo": "Semanas 1-8: rechazo entre 0% y 2%. Semana 2026-08-24: 18.7%. Semana 2026-08-31: 43.9%. Umbral calibrado con 2\u03c3 desde baseline: 2.5%. Las semanas 9 y 10 est\u00e1n 7x-17x sobre el umbral.",
+      "psi_promedio_por_feature_vs_training": {
+        "tenure": 2.7797,
+        "MonthlyCharges": 2.1604
+      }
+    },
+    "que_significa": {
+      "titular": "El cambio es de negocio, no de datos ni de infraestructura. El CRM expandi\u00f3 su cat\u00e1logo de medios de pago y probablemente cambi\u00f3 el criterio con el que marca clientes 'en riesgo'.",
+      "hipotesis_1_medios_pago_expandidos": "Los nuevos valores de PaymentMethod (PSE, PayPal, Digital wallet) sugieren que la empresa lanz\u00f3 nuevos medios de pago en agosto 2026. Los clientes que ADOPTAN nuevos medios son estructuralmente distintos a los del training (m\u00e1s j\u00f3venes, m\u00e1s digitales, tenure m\u00e1s corto \u2192 coincide con el drift extremo de tenure). Confirmar con: fecha de release de los nuevos medios de pago.",
+      "hipotesis_2_campana_nueva": "Contract sigue estable pero tenure baja y MonthlyCharges sube. Hip\u00f3tesis: campa\u00f1a de adquisici\u00f3n dirigida a clientes NUEVOS (bajo tenure) con planes m\u00e1s caros (fibra \u00f3ptica). Confirmar con: costos de adquisici\u00f3n y mix de canales entre 2026-06 y 2026-08.",
+      "hipotesis_3_criterio_alerta_crm_cambi\u00f3": "Alternativamente: mismo negocio, pero el CRM cambi\u00f3 el criterio para marcar 'en riesgo'. Se puede confirmar pidiendo el diff del criterio actual vs el de junio."
+    },
+    "que_recomendamos": {
+      "inmediato_hoy_mismo": "AMPLIAR el enum de PaymentMethod en el contrato (U5 service/app/schemas.py) para aceptar PSE, PayPal, Digital wallet, Corporate billing, Credit card (manual). Esto elimina el 49% de los rechazos que NO son datos malos, son valores leg\u00edtimos que el modelo no conoc\u00eda. Redeploy del servicio.",
+      "corto_plazo_esta_semana": "PAUSAR el uso del score de churn para las decisiones de campa\u00f1a sobre clientes con perfil 'nuevo' (tenure < 12, PaymentMethod nuevo). El modelo no fue entrenado sobre esta poblaci\u00f3n \u2014 su predicci\u00f3n no es confiable ah\u00ed. Documentar como 'poblaci\u00f3n fuera de dominio de entrenamiento'.",
+      "mediano_plazo_mes": "RE-ENTRENAR el modelo con las \u00faltimas 8 semanas de datos etiquetados, agregando: (a) los nuevos valores de PaymentMethod como categor\u00edas v\u00e1lidas; (b) BancoPago SOLO SI la captura se estandariza (mapeo canonicalizado que reduce las 12 variantes a 6).",
+      "largo_plazo": "Instaurar monitoreo autom\u00e1tico de PSI en el pipeline nocturno de Airflow (task drift_check con quality gate). Alerta si PSI > 0.25 en cualquier feature clave. Este mismo pipeline es la l\u00ednea base \u2014 si hubi\u00e9ramos tenido esto en producci\u00f3n, la alerta habr\u00eda saltado hace 3 semanas."
+    },
+    "conclusion_para_la_reunion": "El pipeline est\u00e1 trabajando bien: encontramos QU\u00c9 cambi\u00f3, CU\u00c1NDO, y CON QU\u00c9 MAGNITUD (PSI de tenure de 1.7 a 8.2, valores nuevos de PaymentMethod desde 2026-08-24). Lo que las campa\u00f1as est\u00e1n viendo es un modelo que fue entrenado hace 3 meses sobre una poblaci\u00f3n que ya no existe. Recomendamos ampliar el enum del schema (fix inmediato), pausar el scoring para el segmento 'nuevo' (fix esta semana), y re-entrenar (fix del mes). El modelo debe seguir en producci\u00f3n para el resto de la base, pero con monitoreo activo."
+  }
+}
