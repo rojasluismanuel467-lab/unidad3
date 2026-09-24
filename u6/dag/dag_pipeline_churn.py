@@ -10,7 +10,7 @@ Flujo:
         cargar_a_bq (resultados + cuarentena) -> reporte_metricas
 
 Diferencia con el ejemplo de clase (defendible):
-    El servicio de U5 del Grupo 2 (u5-g02-cr-20260914) tiene 10 features
+    El servicio de U5 del Grupo 2 (u5-g02-cr-20260919) tiene 10 features
     (removimos SeniorCitizen en U3 por instruccion del profesor, agregamos
     InternetService/OnlineSecurity/TechSupport en U4). Este DAG mapea el
     CSV de 22 columnas del cliente al schema de 11 campos de nuestra API.
@@ -52,9 +52,19 @@ def _fetch_id_token(audience: str) -> str:
     """
     result = subprocess.run(
         ["gcloud", "auth", "print-identity-token", f"--audiences={audience}"],
+        check=False, capture_output=True, text=True,
+    )
+    if result.returncode == 0:
+        return result.stdout.strip()
+
+    # Las cuentas de usuario no admiten --audiences en gcloud. El token
+    # estándar sí puede invocar el servicio privado cuando el usuario tiene
+    # roles/run.invoker; el runtime de Cloud Run usa el token con audience.
+    fallback = subprocess.run(
+        ["gcloud", "auth", "print-identity-token"],
         check=True, capture_output=True, text=True,
     )
-    return result.stdout.strip()
+    return fallback.stdout.strip()
 
 
 def _yn(v):
@@ -244,12 +254,12 @@ def pipeline_mlops_churn():
 
     @task
     def cargar_a_bq(scored: dict) -> dict:
-        """Sube resultados y cuarentena a BigQuery via `bq insert` (streaming).
+        """Carga resultados y cuarentena con jobs de carga de BigQuery.
 
-        Usa `bq insert` (subprocess) en vez del SDK Python para evitar la
-        exigencia de serviceusage.services.use del SDK. `bq insert` hace
-        streaming inserts (no requiere bigquery.jobs.create) y usa gcloud
-        auth (no ADC), por lo que funciona en el proyecto compartido.
+        La cuenta de ejecución ya tiene permiso para crear jobs. Usamos
+        `bq load` (load job) en vez de `bq insert` (streaming workaround),
+        de modo que la corrida quede trazable en el historial de BigQuery y
+        la carga sea más adecuada para un lote batch.
         """
         from datetime import datetime as _dt, timezone as _tz
 
@@ -272,25 +282,44 @@ def pipeline_mlops_churn():
         def _preparar_ndjson(path_in: str, extra: dict, cols: set[str]) -> str | None:
             if not os.path.exists(path_in) or os.path.getsize(path_in) == 0:
                 return None
+
+            def _as_json_value(value: Any) -> Any:
+                if value is None or isinstance(value, (dict, list, int, float, bool)):
+                    return value
+                try:
+                    return json.loads(value)
+                except (TypeError, json.JSONDecodeError):
+                    return {"value": str(value)}
+
             path_out = path_in.replace(".jsonl", "_bq.jsonl")
             with open(path_in) as f_in, open(path_out, "w") as f_out:
                 for line in f_in:
                     obj = json.loads(line)
                     obj.update(extra)
                     obj = {k: v for k, v in obj.items() if k in cols}
+                    for json_col in ("error_detail", "raw"):
+                        if json_col in obj:
+                            obj[json_col] = _as_json_value(obj[json_col])
                     f_out.write(json.dumps(obj, default=str) + "\n")
             return path_out
 
-        def _bq_insert(tabla: str, ndjson_path: str) -> None:
+        def _bq_load(tabla: str, ndjson_path: str) -> None:
             fq = f"{BQ_PROJECT}:{BQ_DATASET}.{tabla}"
-            with open(ndjson_path) as f:
-                result = subprocess.run(
-                    ["bq", "insert", fq],
-                    stdin=f, check=False, capture_output=True, text=True,
-                )
+            result = subprocess.run(
+                [
+                    "bq", "load",
+                    f"--project_id={BQ_PROJECT}",
+                    "--location=us-central1",
+                    "--source_format=NEWLINE_DELIMITED_JSON",
+                    "--replace=false",
+                    fq,
+                    ndjson_path,
+                ],
+                check=False, capture_output=True, text=True,
+            )
             if result.returncode != 0:
                 raise ValueError(
-                    f"[bq insert] tabla={tabla} rc={result.returncode}\n"
+                    f"[bq load] tabla={tabla} rc={result.returncode}\n"
                     f"stderr={result.stderr[:1000]}\nstdout={result.stdout[:500]}"
                 )
 
@@ -301,9 +330,11 @@ def pipeline_mlops_churn():
             f"/tmp/u6_out/{scored['run_id']}_res.jsonl", res_extra, RES_COLS
         )
         if res_path:
-            _bq_insert("resultados", res_path)
+            # Sin schema en la línea de comandos: el load job usa el schema
+            # ya definido en la tabla y conserva sus modos REQUIRED/NULLABLE.
+            _bq_load("resultados", res_path)
             n_res = sum(1 for _ in open(res_path))
-            print(f"[cargar_a_bq] resultados: {n_res} filas via bq insert")
+            print(f"[cargar_a_bq] resultados: {n_res} filas via BigQuery load job")
 
         # ---- cuarentena ----
         cur_extra = {"run_id": scored["run_id"], "archivo": scored["archivo"],
@@ -312,9 +343,9 @@ def pipeline_mlops_churn():
             f"/tmp/u6_out/{scored['run_id']}_cur.jsonl", cur_extra, CUR_COLS
         )
         if cur_path:
-            _bq_insert("cuarentena", cur_path)
+            _bq_load("cuarentena", cur_path)
             n_cur = sum(1 for _ in open(cur_path))
-            print(f"[cargar_a_bq] cuarentena: {n_cur} filas via bq insert")
+            print(f"[cargar_a_bq] cuarentena: {n_cur} filas via BigQuery load job")
 
         return scored
 

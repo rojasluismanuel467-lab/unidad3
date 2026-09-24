@@ -3,7 +3,9 @@ uvicorn[standard]==0.30.6
 pydantic==2.9.2
 numpy==2.1.1
 pandas==2.2.2
-scikit-learn==1.5.2
+# El bundle ganador fue serializado con scikit-learn 1.9.0.
+# Esta versión debe coincidir con la usada al entrenar/serializar el modelo.
+scikit-learn==1.9.0
 xgboost==2.1.1
 lightgbm==4.5.0
 google-cloud-storage==2.18.2

@@ -1,24 +1,19 @@
 """Consulta BigQuery — resultados y cuarentena que carga el DAG.
 
-En el proyecto compartido de la clase el usuario NO tiene
-`serviceusage.services.use`, asi que el SDK Python de google-cloud-bigquery
-falla al inicializar el cliente. El CLI `bq` usa gcloud auth y no pasa por
-ese check, por lo que se usa `bq head --format=json` via subprocess.
-
-Las agregaciones (COUNT, GROUP BY) se hacen en pandas despues de traer las
-filas — mas simple y sin necesidad de `bigquery.jobs.create`.
+La cuenta de servicio del monitor tiene acceso de lectura al dataset y
+permiso para crear jobs de consulta. Se usa el cliente oficial de BigQuery
+para ejecutar consultas reales y traer el lote más reciente de cada tabla.
 """
 from __future__ import annotations
 
-import json
 import os
-import shutil
-import subprocess
+import re
 import sys
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+from google.cloud import bigquery
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _shared import apply_page_config, sidebar_branding, page_header, kpi_row, footer
@@ -29,7 +24,7 @@ sidebar_branding()
 page_header(
     "Consulta BigQuery",
     "Tablas `resultados` y `cuarentena` que carga el DAG `pipeline_mlops_churn`. "
-    "Cada corrida deja un `run_id` unico.",
+    "Cada corrida deja un `run_id` único.",
     directriz="Datos en la nube",
 )
 
@@ -48,27 +43,28 @@ project = st.session_state.get("bq_project", PROJECT)
 dataset = st.session_state.get("bq_dataset", DATASET)
 
 
-def _bq_head(tabla: str, n: int) -> pd.DataFrame:
-    """Devuelve las primeras N filas de una tabla via `bq head --format=json`.
+@st.cache_data(ttl=60, show_spinner=False)
+def _query_rows(project_id: str, dataset_id: str, tabla: str, order_col: str, n: int) -> pd.DataFrame:
+    """Ejecuta un query job y devuelve las filas más recientes de una tabla."""
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", project_id):
+        raise ValueError("BQ Project contiene caracteres no permitidos")
+    if not re.fullmatch(r"[A-Za-z0-9_]+", dataset_id):
+        raise ValueError("BQ Dataset contiene caracteres no permitidos")
+    if tabla not in {"resultados", "cuarentena"}:
+        raise ValueError("Tabla no permitida")
+    if order_col not in {"loaded_at", "quarantined_at"}:
+        raise ValueError("Columna de orden no permitida")
 
-    Alternativa al SDK Python cuando el proyecto no otorga serviceusage.use.
-    """
-    if not shutil.which("bq"):
-        raise RuntimeError(
-            "El CLI `bq` no esta disponible en este container. "
-            "Instalar `google-cloud-sdk` o correr esta app desde Cloud Shell."
-        )
-    fq = f"{project}:{dataset}.{tabla}"
-    result = subprocess.run(
-        ["bq", "head", "--format=json", "-n", str(n), fq],
-        capture_output=True, text=True, timeout=60,
+    client = bigquery.Client(project=project_id)
+    query = (
+        f"SELECT * FROM `{project_id}.{dataset_id}.{tabla}` "
+        f"ORDER BY {order_col} DESC LIMIT @limit"
     )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"`bq head` fallo (rc={result.returncode}): {result.stderr.strip()[:500]}"
-        )
-    rows = json.loads(result.stdout) if result.stdout.strip() else []
-    return pd.DataFrame(rows)
+    config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("limit", "INT64", int(n))]
+    )
+    job = client.query(query, job_config=config, location=os.getenv("BQ_LOCATION", "us-central1"))
+    return job.result().to_dataframe()
 
 
 # ---------------------------------------------------------------------------
@@ -78,14 +74,14 @@ error_res = error_cur = None
 
 with st.spinner("Trayendo `resultados`..."):
     try:
-        df_res = _bq_head("resultados", max_rows)
+        df_res = _query_rows(project, dataset, "resultados", "loaded_at", max_rows)
     except Exception as e:
         df_res = pd.DataFrame()
         error_res = str(e)
 
 with st.spinner("Trayendo `cuarentena`..."):
     try:
-        df_cur = _bq_head("cuarentena", max_rows)
+        df_cur = _query_rows(project, dataset, "cuarentena", "quarantined_at", max_rows)
     except Exception as e:
         df_cur = pd.DataFrame()
         error_cur = str(e)
@@ -100,9 +96,9 @@ kpi_row([
 ])
 
 if error_res:
-    st.error(f"No se pudo leer `resultados`.  \n`{error_res}`")
+    st.error(f"No se pudieron leer los `resultados`.  \n`{error_res}`")
 if error_cur:
-    st.error(f"No se pudo leer `cuarentena`.  \n`{error_cur}`")
+    st.error(f"No se pudo leer la `cuarentena`.  \n`{error_cur}`")
 
 if df_res.empty and df_cur.empty:
     st.stop()
@@ -111,7 +107,7 @@ if df_res.empty and df_cur.empty:
 # Corridas del DAG
 # ---------------------------------------------------------------------------
 st.header("Corridas del DAG")
-st.caption("Una fila por `run_id`. Ordenadas por corrida mas reciente primero.")
+st.caption("Una fila por `run_id`, ordenadas por la corrida más reciente.")
 
 if not df_res.empty:
     df_res["customer_risk_score"] = pd.to_numeric(
@@ -180,7 +176,7 @@ st.dataframe(
 # Detalle de errores
 # ---------------------------------------------------------------------------
 if not df_cur.empty:
-    st.header("Distribucion de errores en cuarentena")
+    st.header("Distribución de errores en cuarentena")
     df_cur["http_status"] = pd.to_numeric(df_cur["http_status"], errors="coerce")
     err = (
         df_cur.groupby(["error_type", "http_status"], dropna=False, as_index=False)

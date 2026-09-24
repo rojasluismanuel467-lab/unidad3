@@ -1,4 +1,4 @@
-"""D3 + D4 — Drift analysis con PSI + KS-test + Chi2."""
+"""D3 + D4 — Análisis de drift con PSI, KS-test y chi-cuadrado."""
 from __future__ import annotations
 
 import json
@@ -21,28 +21,28 @@ with open(ROOT / "analysis" / "hallazgos_u6.json") as f:
 drift = H["D3_D4_drift"]
 
 page_header(
-    "Analisis de drift",
-    "Que tanto cambio la poblacion respecto al training set y respecto a "
+    "Análisis de drift",
+    "Qué tanto cambió la población respecto al training set y respecto a "
     "las primeras semanas del CSV.",
     directriz="D3 + D4",
 )
 
 st.markdown(
     "Se comparan las 10 semanas contra dos referencias: **X_train de U4** "
-    "(¿los datos de hoy se parecen a los que el modelo aprendio?) y las "
+    "(¿los datos de hoy se parecen a los que el modelo aprendió?) y las "
     "**primeras 4 semanas del CSV** (¿esta semana se parece a las primeras?). "
-    "Metodo: PSI (Population Stability Index) — umbral 0.25 marca drift "
+    "Método: PSI (Population Stability Index): el umbral 0,25 marca drift "
     "material, siguiendo Siddiqi (2006, *Credit Risk Scorecards*)."
 )
 
-with st.expander("Umbrales de referencia (¿que valor de PSI es 'malo'?)"):
+with st.expander("Umbrales de referencia (¿qué valor de PSI es «malo»?)"):
     u = drift["umbrales_referencia"]
     st.markdown(
         """
-- **PSI < 0.10** — poblacion estable
-- **0.10 ≤ PSI ≤ 0.25** — drift leve, monitorear
-- **PSI > 0.25** — drift material, requiere retraining
-- **KS p-value < 0.05** — distribuciones estadisticamente distintas
+- **PSI < 0,10** — población estable.
+- **0,10 ≤ PSI ≤ 0,25** — drift leve; se debe monitorear.
+- **PSI > 0,25** — drift material; requiere considerar un reentrenamiento.
+- **KS p-value < 0,05** — distribuciones estadísticamente distintas.
 """
     )
     st.caption(u["justificacion_psi_material_0.25"])
@@ -51,7 +51,7 @@ with st.expander("Umbrales de referencia (¿que valor de PSI es 'malo'?)"):
 # (a) vs Training U4
 # ---------------------------------------------------------------------------
 st.header("Drift vs X_train de U4")
-st.caption("¿Los datos de hoy se parecen a los que el modelo aprendio?")
+st.caption("¿Los datos de hoy se parecen a los que el modelo aprendió?")
 
 for feat in drift["features_numericas"]:
     st.subheader(f"`{feat}`")
@@ -64,7 +64,7 @@ for feat in drift["features_numericas"]:
     with col2:
         st.markdown("**KS statistic por semana**")
         st.line_chart(df_feat.set_index("semana")["ks_stat"], height=220)
-    with st.expander("Tabla numerica"):
+    with st.expander("Tabla numérica"):
         st.dataframe(
             df_feat, use_container_width=True, hide_index=True,
             column_config={
@@ -85,7 +85,7 @@ for feat in drift["features_numericas"]:
     resultados = drift["vs_baseline_4_semanas"][feat]
     df_feat = pd.DataFrame(resultados)
     st.bar_chart(df_feat.set_index("semana")["psi"], height=220)
-    with st.expander("Tabla numerica"):
+    with st.expander("Tabla numérica"):
         st.dataframe(
             df_feat, use_container_width=True, hide_index=True,
             column_config={
@@ -97,7 +97,7 @@ for feat in drift["features_numericas"]:
 # Categoricas
 # ---------------------------------------------------------------------------
 st.header("`Contract` vs training (chi²)")
-st.caption("¿La distribucion de Contract cambio?")
+st.caption("¿La distribución de Contract cambió?")
 
 chi2_data = pd.DataFrame(drift["chi2_contract_vs_training"])
 col1, col2 = st.columns(2)
@@ -107,23 +107,23 @@ with col1:
 with col2:
     st.markdown("**Delta maximo por bucket**")
     st.line_chart(chi2_data.set_index("semana")["max_delta_pct"], height=220)
-with st.expander("Tabla numerica chi²"):
+with st.expander("Tabla numérica de chi²"):
     st.dataframe(chi2_data, use_container_width=True, hide_index=True)
 
 st.markdown(
-    "Contract fluctua pero **no crece monotonamente** — es relativamente "
+    "Contract fluctúa, pero **no crece monótonamente**: es relativamente "
     "estable. No todas las features driftan: cambiaron `tenure` y "
     "`MonthlyCharges`, no `Contract`. Es un shift dirigido, no ruido general."
 )
 
 # ---------------------------------------------------------------------------
-# Sesgo de seleccion (senal secundaria)
+# Sesgo de selección (señal secundaria)
 # ---------------------------------------------------------------------------
-st.header("Sesgo de seleccion en las semanas con rechazo alto")
+st.header("Sesgo de selección en las semanas con rechazo alto")
 st.caption(
-    "Los clientes que sobreviven la cuarentena en las ultimas semanas tienen "
-    "scores mas bajos y menos variados. Es senal indirecta de que el filtro "
-    "se queda con los perfiles 'tradicionales' — los raros se van a cuarentena."
+    "Los clientes que sobreviven la cuarentena en las últimas semanas tienen "
+    "scores más bajos y menos variados. Es una señal indirecta de que el filtro "
+    "se queda con los perfiles «tradicionales»; los raros van a cuarentena."
 )
 
 # Estas cifras vienen del diagnostico contra BQ del 2026-09-19 sobre la
@@ -137,8 +137,8 @@ sesgo_data = pd.DataFrame([
     {"semana": "2026-08-03", "n_ok": 56, "media_score": 0.308, "std_score": 0.156},
     {"semana": "2026-08-10", "n_ok": 85, "media_score": 0.257, "std_score": 0.142},
     {"semana": "2026-08-17", "n_ok": 70, "media_score": 0.267, "std_score": 0.112},
-    {"semana": "2026-08-24", "n_ok": 74, "media_score": 0.228, "std_score": 0.093},
-    {"semana": "2026-08-31", "n_ok": 37, "media_score": 0.202, "std_score": 0.059},
+    {"semana": "2026-08-24", "n_ok": 79, "media_score": 0.228, "std_score": 0.093},
+    {"semana": "2026-08-31", "n_ok": 46, "media_score": 0.202, "std_score": 0.059},
 ])
 
 col1, col2 = st.columns(2)
@@ -146,10 +146,10 @@ with col1:
     st.markdown("**Score promedio de los OK por semana**")
     st.line_chart(sesgo_data.set_index("semana")["media_score"], height=220)
 with col2:
-    st.markdown("**Desviacion estandar de los OK por semana**")
+    st.markdown("**Desviación estándar de los OK por semana**")
     st.line_chart(sesgo_data.set_index("semana")["std_score"], height=220)
 
-with st.expander("Tabla numerica del sesgo de seleccion"):
+with st.expander("Tabla numérica del sesgo de selección"):
     st.dataframe(
         sesgo_data, use_container_width=True, hide_index=True,
         column_config={
@@ -160,11 +160,11 @@ with st.expander("Tabla numerica del sesgo de seleccion"):
     )
 
 st.markdown(
-    "**Lectura.** En la semana 2026-08-31 (43.9 % rechazo) los 37 clientes "
+    "**Lectura.** En la semana 2026-08-31 (30,30 % de rechazo), los 46 clientes "
     "que pasaron tienen score medio 0.20 y stdev 0.06 — muy comprimido. "
-    "Los perfiles nuevos (PSE, PayPal, tenure >100) caen a cuarentena y "
+    "Los perfiles nuevos (PSE, PayPal) caen a cuarentena y "
     "solo pasan los clientes con perfiles conocidos. El modelo ve una "
-    "poblacion ficticiamente 'tradicional' que no refleja la realidad."
+    "población ficticiamente «tradicional» que no refleja la realidad."
 )
 
 # ---------------------------------------------------------------------------

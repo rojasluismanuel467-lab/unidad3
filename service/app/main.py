@@ -356,3 +356,22 @@ async def _log_422(request: Request, exc: RequestValidationError):
         }},
     )
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+
+@app.exception_handler(HTTPException)
+async def _log_http_exception(request: Request, exc: HTTPException):
+    """Registra también los 422 de reglas de negocio, no solo los de Pydantic."""
+    if exc.status_code == 422:
+        logger.warning(
+            "predict_422",
+            extra={"json_fields": {
+                "errors": exc.detail,
+                "path": request.url.path,
+                "source": "business_rule",
+            }},
+        )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=exc.headers,
+    )

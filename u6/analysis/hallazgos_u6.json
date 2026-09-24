@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generado_en": "2026-09-19T19:00:27.227384+00:00",
+    "generado_en": "2026-09-24T03:54:05.849510+00:00",
     "csv_filas": 703,
     "csv_columnas": 22,
     "semanas": [
@@ -77,23 +77,23 @@
     {
       "fecha_lote": "2026-08-24",
       "n_total": 91,
-      "n_validas": 74,
-      "n_rechazadas": 17,
-      "tasa_rechazo_pct": 18.68
+      "n_validas": 79,
+      "n_rechazadas": 12,
+      "tasa_rechazo_pct": 13.19
     },
     {
       "fecha_lote": "2026-08-31",
       "n_total": 66,
-      "n_validas": 37,
-      "n_rechazadas": 29,
-      "tasa_rechazo_pct": 43.94
+      "n_validas": 46,
+      "n_rechazadas": 20,
+      "tasa_rechazo_pct": 30.3
     }
   ],
   "D1_agregado": {
     "total": 703,
-    "validas": 653,
-    "rechazadas": 50,
-    "tasa_rechazo_pct": 7.11
+    "validas": 667,
+    "rechazadas": 36,
+    "tasa_rechazo_pct": 5.12
   },
   "D1_calibracion_umbral": {
     "primeras_4_semanas_media_rechazo_pct": 0.5,
@@ -113,15 +113,15 @@
     }
   },
   "D2_cuarentena": {
-    "total_errores": 55,
+    "total_errores": 37,
+    "filas_rechazadas": 36,
     "por_campo": {
       "PaymentMethod": 27,
-      "tenure": 21,
-      "MonthlyCharges": 7
+      "MonthlyCharges": 7,
+      "tenure": 3
     },
     "por_tipo": {
       "enum": 27,
-      "range": 18,
       "float_parsing_o_null": 7,
       "int_parsing_o_null": 3
     },
@@ -188,15 +188,11 @@
       },
       {
         "semana": "2026-08-24",
-        "n_errores_totales": 18,
+        "n_errores_totales": 12,
         "top_campos": [
           [
             "PaymentMethod",
             10
-          ],
-          [
-            "tenure",
-            6
           ],
           [
             "MonthlyCharges",
@@ -206,34 +202,24 @@
       },
       {
         "semana": "2026-08-31",
-        "n_errores_totales": 33,
+        "n_errores_totales": 21,
         "top_campos": [
           [
             "PaymentMethod",
             17
           ],
           [
-            "tenure",
-            14
+            "MonthlyCharges",
+            2
           ],
           [
-            "MonthlyCharges",
+            "tenure",
             2
           ]
         ]
       }
     ],
-    "insight_texto_crudo": "La cuarentena guarda el registro completo como string. Para agrupar por tipo de error hay que re-parsear cada fila manualmente. Ese re-parseo es exactamente el trabajo que la validaci\u00f3n pydantic ya hizo. Dise\u00f1o mejorable: guardar el objeto RequestValidationError.errors() serializado como JSON separado, no solo el texto crudo.",
-    "hallazgos_extra_al_correr_pipeline_real": {
-      "fecha_ejecucion": "2026-09-19",
-      "corrida_analizada": "20260919T203047-lotes_retencion_u6",
-      "descubrimientos": [
-        "**10 filas** con error client_side_parse por NaN o 'sin dato' en tenure/monthly_charges: RET-0006 (monthly_charges='sin dato'), RET-0241 (tenure=NaN), RET-0443 (monthly_charges=NaN), entre otros. Fuente sucia del CRM, no bug del pipeline.",
-        "**Bug de contrato detectado**: RET-0548 rechazado con http_status=422 por tenure=130 (schemas.py tiene tenure<=100). Un cliente con 10.8 anios de antiguedad es plausible en telecom. Fix aplicado en U6: subir limite a 200. Este hallazgo NO se derivaba del EDA porque el bug estaba en el contrato, no en los datos.",
-        "**40 rechazos api_reject de 50 (80%)** son valores nuevos de PaymentMethod (PSE, PayPal, Digital wallet). Confirma la hipotesis D6.",
-        "El pipeline detecto correctamente el drift: semanas 2026-08-24 (18.7% rechazo) y 2026-08-31 (43.9% rechazo) coinciden con el analisis previo."
-      ]
-    }
+    "insight_texto_crudo": "La cuarentena guarda el registro completo como texto. Para agrupar por tipo de error hay que volver a analizar cada fila manualmente. Ese reprocesamiento es exactamente el trabajo que la validaci\u00f3n de Pydantic ya hizo. Dise\u00f1o mejorable: guardar el objeto RequestValidationError.errors() serializado como JSON separado, no solo el texto crudo."
   },
   "D5_banco_pago": {
     "primera_semana_con_datos": "2026-07-27",
@@ -317,7 +303,7 @@
       "007": 6
     },
     "top_valores_canonicalizados": {
-      "NaN": 259,
+      "null": 259,
       "bancolombia": 109,
       "banco de bogota": 97,
       "bbva": 80,
@@ -327,7 +313,7 @@
     },
     "n_variantes_originales": 12,
     "n_variantes_despues_canon": 6,
-    "decision_defendible": "Estrategia: (a) NO usar BancoPago como feature del modelo, porque el modelo actual no la conoce y agregarla requiere re-entrenar. (b) S\u00cd canonicalizar los valores para uso operativo (dashboards, an\u00e1lisis). El mapeo reduce las variantes de 12 a 6. (c) Reportar al cliente que la captura mejor\u00f3 desde 2026-07-27 pero requiere gobierno de datos (validaci\u00f3n en el CRM)."
+    "decision_defendible": "Estrategia: (a) NO usar BancoPago como feature del modelo, porque el modelo actual no la conoce y agregarla requiere re-entrenar. (b) S\u00cd canonicalizar los valores para uso operativo (dashboards y an\u00e1lisis). El mapeo reduce las variantes de 12 a 6. (c) Reportar al cliente que la captura mejor\u00f3 desde 2026-07-27, pero requiere gobierno de datos (validaci\u00f3n en el CRM)."
   },
   "D3_D4_drift": {
     "features_numericas": [
@@ -700,23 +686,23 @@
   "D6_respuesta_cliente": {
     "que_paso": {
       "titular": "El modelo NO se rompi\u00f3. La POBLACI\u00d3N cambi\u00f3 y el pipeline lo detect\u00f3. Los rechazos y el drift est\u00e1n correlacionados con los cambios que el CRM introdujo en producci\u00f3n.",
-      "evidencia_1_valores_nuevos_paymentmethod": "Desde 2026-08-24 el CRM empez\u00f3 a mandar valores de PaymentMethod que no existen en el enum del contrato del modelo: PSE, PayPal, Digital wallet, Corporate billing, Credit card (manual). Esto explica el 49% de los rechazos (27 de 55).",
+      "evidencia_1_valores_nuevos_paymentmethod": "Desde 2026-08-24 el CRM empez\u00f3 a mandar valores de PaymentMethod que no existen en el enum del contrato del modelo: PSE, PayPal, Digital wallet, Corporate billing, Credit card (manual). Esto representa 73.0% de los errores de campo (27 de 37).",
       "evidencia_1_detalle_por_semana": {
-        "2026-08-24 :: PSE": 3,
         "2026-08-24 :: Corporate billing": 3,
+        "2026-08-24 :: PSE": 3,
         "2026-08-24 :: Digital wallet": 2,
         "2026-08-24 :: Credit card (manual)": 1,
         "2026-08-24 :: PayPal": 1,
         "2026-08-31 :: PayPal": 6,
         "2026-08-31 :: Corporate billing": 3,
-        "2026-08-31 :: PSE": 3,
         "2026-08-31 :: Digital wallet": 3,
+        "2026-08-31 :: PSE": 3,
         "2026-08-31 :: Credit card (manual)": 2
       },
       "evidencia_2_drift_material_tenure": "El PSI de `tenure` vs el training se dispara de ~1.7 (estable) a 5.0 y 8.2 en las \u00faltimas 2 semanas. Umbral de referencia: PSI > 0.25 es drift material. Estamos 30x arriba.",
       "evidencia_3_drift_material_monthlycharges": "PSI de `MonthlyCharges`: 1.4 \u2192 3.7 \u2192 5.1 en las \u00faltimas 3 semanas. Tambi\u00e9n drift material inequ\u00edvoco.",
       "evidencia_4_contract_estable": "La distribuci\u00f3n de Contract NO cambi\u00f3 materialmente (chi2 fluct\u00faa pero no crece). No todas las features driftan \u2014 es un shift dirigido, no ruido.",
-      "evidencia_5_tasa_rechazo": "Semanas 1-8: rechazo entre 0% y 2%. Semana 2026-08-24: 18.7%. Semana 2026-08-31: 43.9%. Umbral calibrado con 2\u03c3 desde baseline: 2.5%. Las semanas 9 y 10 est\u00e1n 7x-17x sobre el umbral.",
+      "evidencia_5_tasa_rechazo": "Semanas 1-8: rechazo entre 0% y 2%. Semana 2026-08-24: 13.19%. Semana 2026-08-31: 30.30%. Umbral calibrado con 2\u03c3 desde baseline: 2.5%. Ambas semanas superan el umbral calculado.",
       "psi_promedio_por_feature_vs_training": {
         "tenure": 2.7797,
         "MonthlyCharges": 2.1604
@@ -729,7 +715,7 @@
       "hipotesis_3_criterio_alerta_crm_cambi\u00f3": "Alternativamente: mismo negocio, pero el CRM cambi\u00f3 el criterio para marcar 'en riesgo'. Se puede confirmar pidiendo el diff del criterio actual vs el de junio."
     },
     "que_recomendamos": {
-      "inmediato_hoy_mismo": "AMPLIAR el enum de PaymentMethod en el contrato (U5 service/app/schemas.py) para aceptar PSE, PayPal, Digital wallet, Corporate billing, Credit card (manual). Esto elimina el 49% de los rechazos que NO son datos malos, son valores leg\u00edtimos que el modelo no conoc\u00eda. Redeploy del servicio.",
+      "inmediato_hoy_mismo": "AMPLIAR el enum de PaymentMethod en el contrato (U5 service/app/schemas.py) para aceptar PSE, PayPal, Digital wallet, Corporate billing, Credit card (manual). Esto resuelve 73.0% de los errores de campo que no son datos malos, sino valores leg\u00edtimos que el modelo no conoc\u00eda. Redeploy del servicio.",
       "corto_plazo_esta_semana": "PAUSAR el uso del score de churn para las decisiones de campa\u00f1a sobre clientes con perfil 'nuevo' (tenure < 12, PaymentMethod nuevo). El modelo no fue entrenado sobre esta poblaci\u00f3n \u2014 su predicci\u00f3n no es confiable ah\u00ed. Documentar como 'poblaci\u00f3n fuera de dominio de entrenamiento'.",
       "mediano_plazo_mes": "RE-ENTRENAR el modelo con las \u00faltimas 8 semanas de datos etiquetados, agregando: (a) los nuevos valores de PaymentMethod como categor\u00edas v\u00e1lidas; (b) BancoPago SOLO SI la captura se estandariza (mapeo canonicalizado que reduce las 12 variantes a 6).",
       "largo_plazo": "Instaurar monitoreo autom\u00e1tico de PSI en el pipeline nocturno de Airflow (task drift_check con quality gate). Alerta si PSI > 0.25 en cualquier feature clave. Este mismo pipeline es la l\u00ednea base \u2014 si hubi\u00e9ramos tenido esto en producci\u00f3n, la alerta habr\u00eda saltado hace 3 semanas."
@@ -749,13 +735,13 @@
       },
       {
         "fecha": "2026-08-24",
-        "evento": "PRIMERA ALARMA \u2014 cuarentena 18.7%",
+        "evento": "PRIMERA ALARMA \u2014 cuarentena 13.19%",
         "estado": "rojo",
         "detalle": "PSI tenure salta a 5.0. Aparecen PSE y PayPal en PaymentMethod"
       },
       {
         "fecha": "2026-08-31",
-        "evento": "SEGUNDA ALARMA \u2014 cuarentena 43.9%",
+        "evento": "SEGUNDA ALARMA \u2014 cuarentena 30.30%",
         "estado": "rojo",
         "detalle": "PSI tenure 8.2. Se agregan Digital wallet, Corporate billing, Credit card (manual)"
       },
@@ -769,7 +755,7 @@
         "fecha": "2026-09-19 \u2192 2026-09-26",
         "evento": "Ampliar enum en schema (owner: Grupo 2)",
         "estado": "planificado",
-        "detalle": "Fix inmediato; elimina 49% de los rechazos"
+        "detalle": "Fix inmediato; resuelve 73% de los errores de campo"
       },
       {
         "fecha": "2026-10-03",
@@ -796,21 +782,7 @@
         "owner": "Grupo 2 (Gabriel)",
         "due": "2026-09-26",
         "prioridad": "P0",
-        "impacto": "Elimina 49% de los rechazos"
-      },
-      {
-        "item": "Subir limite superior de tenure de 100 a 200 meses en schemas.py (aplicado en U6, commit fc1131b+)",
-        "owner": "Grupo 2 (Luis)",
-        "due": "2026-09-19",
-        "prioridad": "P0",
-        "impacto": "Elimina rechazo espurio de clientes con 10+ anios de antiguedad (RET-0548 fue el caso detectado)"
-      },
-      {
-        "item": "Revisar mas casos de client_side_parse (10 filas con NaN/'sin dato' en tenure/monthly_charges) con el equipo del CRM para trazar el origen de la data sucia",
-        "owner": "Grupo 2 + Direccion de Retencion",
-        "due": "2026-10-03",
-        "prioridad": "P1",
-        "impacto": "Estos NO son drift semantico, son falla de captura upstream"
+        "impacto": "Resuelve 73% de los errores de campo"
       },
       {
         "item": "Redeploy Cloud Run u5-g02-cr con nuevo schema",

@@ -1,9 +1,7 @@
-"""Prediccion individual — invoca el servicio Cloud Run de U5.
+"""Predicción individual — invoca el servicio Cloud Run de U5.
 
-Usa `gcloud auth print-identity-token` (subprocess) para obtener el token
-en vez del SDK Python `google.oauth2.id_token`, que en el proyecto
-compartido de la clase falla porque el usuario no tiene
-`serviceusage.services.use`.
+En Cloud Run el token se obtiene desde el metadata server con el SDK oficial.
+El fallback a `gcloud` queda únicamente para ejecutar Streamlit localmente.
 """
 from __future__ import annotations
 
@@ -15,30 +13,38 @@ from pathlib import Path
 
 import requests
 import streamlit as st
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _shared import apply_page_config, sidebar_branding, page_header, kpi_row, footer
 
-apply_page_config(page_title="Prediccion · Monitor U6")
+apply_page_config(page_title="Predicción · Monitor U6")
 sidebar_branding()
 
 page_header(
-    "Prediccion individual",
-    "Formulario que invoca el servicio U5 (`u5-g02-cr-20260914`) con un "
-    "identity token firmado. Cloud Run corre con `--no-allow-unauthenticated`.",
+    "Predicción individual",
+    "Formulario que invoca el servicio U5 (`u5-g02-cr-20260919`) con un "
+    "identity token firmado. Cloud Run funciona con `--no-allow-unauthenticated`.",
     directriz="Herramienta",
 )
 
-U5_SERVICE_NAME = os.getenv("U5_SERVICE_NAME", "u5-g02-cr-20260914")
+U5_SERVICE_NAME = os.getenv("U5_SERVICE_NAME", "u5-g02-cr-20260919")
 U5_REGION = os.getenv("U5_REGION", "us-central1")
 
 
 def _fetch_id_token(audience: str) -> str:
-    """Identity token via gcloud CLI (evita ADC + serviceusage)."""
-    if not shutil.which("gcloud"):
-        raise RuntimeError(
-            "El CLI `gcloud` no esta disponible. Instalar google-cloud-sdk."
-        )
+    """Obtiene un identity token desde Cloud Run o desde gcloud local."""
+    try:
+        return id_token.fetch_id_token(google_requests.Request(), audience)
+    except Exception as metadata_error:
+        # En desarrollo local no existe el metadata server; allí se usa la
+        # credencial de la sesión gcloud como fallback explícito.
+        if not shutil.which("gcloud"):
+            raise RuntimeError(
+                "No fue posible obtener un identity token desde Cloud Run "
+                f"ni se encontró gcloud localmente: {metadata_error}"
+            ) from metadata_error
     result = subprocess.run(
         ["gcloud", "auth", "print-identity-token", f"--audiences={audience}"],
         capture_output=True, text=True, timeout=15,
@@ -102,7 +108,7 @@ with st.form("prediccion"):
         partner = st.checkbox("partner", value=True)
         dependents = st.checkbox("dependents", value=False)
     with c2:
-        tenure = st.number_input("tenure (meses)", 0, 100, 12)
+        tenure = st.number_input("tenure (meses)", 0, 200, 12)
         contract = st.selectbox("contract", ["Month-to-month", "One year", "Two year"])
         payment_method = st.selectbox(
             "payment_method",
@@ -121,7 +127,7 @@ if submitted:
     if not url:
         st.error(
             "Falta configurar `CLOUD_RUN_URL`.  \n"
-            "**Que hacer:** exportar la variable de entorno antes de arrancar "
+            "**Qué hacer:** exporta la variable de entorno antes de iniciar "
             "Streamlit, o pegar la URL en el campo del sidebar."
         )
         st.stop()
@@ -138,7 +144,7 @@ if submitted:
     }
 
     try:
-        with st.spinner("Firmando peticion y llamando al servicio..."):
+        with st.spinner("Firmando la petición y llamando al servicio..."):
             token = _fetch_id_token(url)
             resp = requests.post(
                 f"{url.rstrip('/')}/predict",
@@ -151,8 +157,8 @@ if submitted:
             )
     except Exception as e:
         st.error(
-            f"Fallo la peticion: `{type(e).__name__}: {e}`  \n"
-            "**Diagnostico habitual:**\n"
+            f"Falló la petición: `{type(e).__name__}: {e}`  \n"
+            "**Diagnóstico habitual:**\n"
             "- Sin `gcloud auth print-identity-token`: reautenticar con "
             "`gcloud auth login`.\n"
             "- Cloud Run responde 403: la cuenta activa no tiene "
@@ -173,14 +179,14 @@ if submitted:
              "Probabilidad de churn (calibrada)"),
             ("Threshold usado", f"{data['threshold_used']:.4f}",
              "Punto de corte optimo aprendido en Fase 1"),
-            ("Prediccion",
+            ("Predicción",
              "Churn" if data["predicted_churn"] else "No churn",
              None),
         ])
         with st.expander("Payload completo de la respuesta"):
             st.json(data)
     else:
-        st.warning(f"HTTP {resp.status_code} — la peticion fue rechazada por el servicio.")
+        st.warning(f"HTTP {resp.status_code} — la petición fue rechazada por el servicio.")
         st.json(data)
 
-footer(fuentes=["Cloud Run u5-g02-cr-20260914"])
+footer(fuentes=["Cloud Run u5-g02-cr-20260919"])

@@ -39,7 +39,7 @@ def apply_page_config(*, page_title: str) -> None:
         menu_items={
             "Get Help": None,
             "Report a bug": None,
-            "About": "Monitor de pipeline U6 — Grupo 2 — Universidad Icesi",
+            "About": "Monitor del pipeline U6 — Grupo 2 — Universidad Icesi",
         },
     )
     st.markdown(_CSS, unsafe_allow_html=True)
@@ -183,7 +183,7 @@ def sidebar_branding() -> None:
     with st.sidebar:
         st.markdown(
             """<div class="brand-wordmark">MONITOR U6</div>
-<div class="brand-tag">Pipeline retencion · Grupo 2</div>""",
+<div class="brand-tag">Pipeline de retención · Grupo 2</div>""",
             unsafe_allow_html=True,
         )
 

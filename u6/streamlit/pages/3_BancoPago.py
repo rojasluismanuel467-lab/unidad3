@@ -1,4 +1,4 @@
-"""D5 — Que hacer con la columna nueva BancoPago."""
+"""D5 — Qué hacer con la columna nueva BancoPago."""
 from __future__ import annotations
 
 import json
@@ -21,14 +21,14 @@ b = H["D5_banco_pago"]
 
 page_header(
     "Columna nueva: BancoPago",
-    "Que hacer con un campo que llega en el CSV pero el modelo no conoce, "
-    "y que ademas viene con captura parcial.",
+    "Qué hacer con un campo que llega en el CSV, pero el modelo no conoce, "
+    "y que además viene con captura parcial.",
     directriz="D5",
 )
 
 st.markdown(
     "> Desde hace unas semanas empezamos a capturar el banco desde el cual "
-    "nos pagan. Es un campo nuevo, asi que en los primeros envios viene vacio "
+    "nos pagan. Es un campo nuevo, así que en los primeros envíos viene vacío "
     "y aparece a partir de cierta fecha. Sabemos que la captura no ha sido "
     "perfecta.\n\n— Direccion de Retencion, correo del 2026-09-14"
 )
@@ -37,7 +37,7 @@ kpi_row([
     ("Primera semana con datos", b["primera_semana_con_datos"], None),
     ("Filas con BancoPago", f"{b['n_valores_no_nulos']:,}", None),
     ("Filas sin BancoPago", f"{b['n_valores_nulos']:,}",
-     "Nulls en las primeras semanas antes de que existiera la columna"),
+     "Valores nulos en las primeras semanas, antes de que existiera la columna"),
 ])
 
 # ---------------------------------------------------------------------------
@@ -58,20 +58,20 @@ with col2:
     )
 
 st.caption(
-    "La cobertura salta de 0 % a 94 % entre 2026-07-20 y 2026-07-27 (arranque "
-    "de captura). Despues se estabiliza entre 92-98 %."
+    "La cobertura salta de 0 % a 94 % entre 2026-07-20 y 2026-07-27 (inicio "
+    "de la captura). Después se estabiliza entre 92 % y 98 %."
 )
 
 # ---------------------------------------------------------------------------
-# Variantes / canonicalizacion
+# Variantes / canonicalización
 # ---------------------------------------------------------------------------
 st.header("Captura inconsistente")
 
 kpi_row([
     ("Variantes originales", str(b["n_variantes_originales"]),
      "Strings distintos en el CSV crudo"),
-    ("Despues de canonicalizar", str(b["n_variantes_despues_canon"]),
-     "Aplicando strip + lowercase + mapping de sinonimos"),
+    ("Después de canonicalizar", str(b["n_variantes_despues_canon"]),
+     "Aplicando strip + lowercase + mapeo de sinónimos"),
     ("Reduccion",
      f"{100 * (1 - b['n_variantes_despues_canon'] / max(b['n_variantes_originales'], 1)):.0f}%",
      None),
@@ -90,7 +90,7 @@ with col2:
     st.subheader("Top valores canonicalizados")
     st.dataframe(
         pd.DataFrame(b["top_valores_canonicalizados"].items(),
-                     columns=["Banco canon", "N"]),
+        columns=["Banco canónico", "N"]),
         use_container_width=True, hide_index=True,
         column_config={"N": st.column_config.NumberColumn(format="%d")},
     )
@@ -98,45 +98,45 @@ with col2:
 st.markdown(
     "El mismo banco aparece hasta con 3 variantes:  \n"
     "- **Bancolombia** — `Bancolombia S.A.`, `bancolombia`  \n"
-    "- **Banco de Bogota** — `BCO BOGOTA`  \n"
+    "- **Banco de Bogotá** — `BCO BOGOTA`  \n"
     "- **Davivienda** — `davivienda`"
 )
 
 # ---------------------------------------------------------------------------
-# Decision
+# Decisión
 # ---------------------------------------------------------------------------
-st.header("Decision")
+st.header("Decisión")
 st.markdown(f"**{b['decision_defendible']}**")
 
 st.subheader("Alternativas descartadas")
 
-with st.expander("A — Imputar los nulos con el banco mas frecuente"):
+with st.expander("A — Imputar los nulos con el banco más frecuente"):
     st.markdown(
-        "Meteria sesgo sistematico: el cliente sin BancoPago no es aleatorio. "
-        "Ademas las primeras 4 semanas son 100 % nulls porque la columna no "
-        "existia, e imputarlas contaminaria el baseline de drift."
+        "Metería sesgo sistemático: el cliente sin BancoPago no es aleatorio. "
+        "Además, las primeras cuatro semanas son 100 % nulas porque la columna "
+        "no existía, e imputarlas contaminaría el baseline de drift."
     )
 
 with st.expander("B — Descartar todas las filas sin BancoPago"):
     st.markdown(
-        "Perderiamos 259 clientes (37 % del CSV), casi todos de las primeras "
-        "4 semanas. Rompe la promesa del pipeline de scorear todo lo que pasa "
+        "Perderíamos 259 clientes (37 % del CSV), casi todos de las primeras "
+        "cuatro semanas. Rompe la promesa del pipeline de puntuar todo lo que pasa "
         "el contrato."
     )
 
 with st.expander("C — Agregar BancoPago como feature del modelo ya"):
     st.markdown(
         "El modelo actual no la conoce (features cerradas en U3/U4). Agregarla "
-        "requiere re-entrenar con nueva feature engineering. Ademas con la "
-        "captura tan sucia, el modelo aprenderia los typos como categorias "
-        "distintas."
+        "requiere reentrenar con nueva ingeniería de features. Además, con la "
+        "captura tan sucia, el modelo aprendería los errores de escritura como "
+        "categorías distintas."
     )
 
-with st.expander("D — Ignorar como feature + canonicalizar para uso operativo (elegida)",
+with st.expander("D — Ignorar como feature y canonicalizar para uso operativo (elegida)",
                  expanded=True):
     st.markdown(
         "- No rompe el contrato del modelo.  \n"
-        "- Permite dashboards y analisis operativo.  \n"
+        "- Permite dashboards y análisis operativo.  \n"
         "- Deja documentado el problema de captura al cliente sin dependencia "
         "  tecnica del pipeline de scoring."
     )

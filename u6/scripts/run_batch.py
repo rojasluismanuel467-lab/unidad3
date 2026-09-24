@@ -6,7 +6,7 @@ Es la pieza que consume tanto el DAG como el Streamlit (opcional).
 Uso:
     python run_batch.py \
         --csv u6/data/lotes_retencion_u6.csv \
-        --url https://u5-g02-cr-20260914-xxxx.a.run.app \
+        --url https://u5-g02-cr-20260919-xxxx.a.run.app \
         --out-dir u6/data/outputs/
 
 Grupo 2 — Gabriel Ernesto Escobar A00399291, David Artunduaga Penagos A00396342, Luis Manuel Rojas A00399289.
@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,10 +39,19 @@ ENUMS = {
 
 
 def _fetch_id_token(audience: str) -> str:
-    import google.auth.transport.requests
-    from google.oauth2 import id_token
-    auth_req = google.auth.transport.requests.Request()
-    return id_token.fetch_id_token(auth_req, audience)
+    # En Cloud Run/Cloud Shell ADC puede resolver el token directamente.
+    # En una estación local usamos las credenciales de gcloud como fallback.
+    try:
+        import google.auth.transport.requests
+        from google.oauth2 import id_token
+        auth_req = google.auth.transport.requests.Request()
+        return id_token.fetch_id_token(auth_req, audience)
+    except Exception:
+        result = subprocess.run(
+            ["gcloud", "auth", "print-identity-token"],
+            check=True, capture_output=True, text=True,
+        )
+        return result.stdout.strip()
 
 
 def _to_payload(row: pd.Series) -> dict[str, Any]:
@@ -174,6 +184,19 @@ def main() -> int:
 
     predicciones, cuarentena, resumen = score_batch(df, args.url)
     print(json.dumps(resumen, indent=2))
+
+    # Alinea la salida del consumidor batch con el contrato de las tablas U6.
+    # Esto permite cargarla directamente a BigQuery sin perder trazabilidad.
+    run_id = resumen["batch_id"]
+    archivo = Path(args.csv).name
+    for item in predicciones:
+        item["run_id"] = run_id
+        item["archivo"] = archivo
+        item["requested_by"] = "run_batch"
+    for item in cuarentena:
+        item["customer_id"] = item.pop("customerID", item.get("customer_id", ""))
+        item["run_id"] = run_id
+        item["archivo"] = archivo
 
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)

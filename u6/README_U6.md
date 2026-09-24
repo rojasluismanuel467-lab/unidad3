@@ -46,7 +46,7 @@ gcloud config get-value project
 ### 2. Verificar que la API de U5 sigue viva
 
 ```bash
-gcloud run services describe u5-g02-cr-20260914 \
+gcloud run services describe u5-g02-cr-20260919 \
   --region=us-central1 \
   --format="value(status.url, status.latestReadyRevisionName)"
 ```
@@ -54,7 +54,7 @@ gcloud run services describe u5-g02-cr-20260914 \
 Guardar la URL:
 
 ```bash
-export API_URL=$(gcloud run services describe u5-g02-cr-20260914 \
+export API_URL=$(gcloud run services describe u5-g02-cr-20260919 \
   --region=us-central1 --format='value(status.url)')/predict
 echo $API_URL
 ```
@@ -167,7 +167,7 @@ El DAG:
 ```bash
 cd u6/streamlit
 pip install -r requirements.txt
-export CLOUD_RUN_URL="$API_URL"  # sin /predict
+export CLOUD_RUN_URL="${API_URL%/predict}"  # URL base, sin /predict
 export BQ_PROJECT="computacionnube20262"
 export BQ_DATASET="u6_g02_data_20260919"
 streamlit run app.py --server.port 8501 --server.enableCORS=false \
@@ -182,21 +182,22 @@ export PROJECT_ID=computacionnube20262
 
 # Build (context = u6/ para copiar analysis/ y data/ sin symlinks)
 docker build \
-  -t us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260914/u6-g02-img-20260919:v1 \
+  -t us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260919/u6-g02-img-20260919:v1 \
   -f streamlit/Dockerfile .
 
-docker push us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260914/u6-g02-img-20260919:v1
+docker push us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260919/u6-g02-img-20260919:v1
 
 gcloud run deploy u6-g02-cr-20260919 \
-  --image=us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260914/u6-g02-img-20260919:v1 \
+  --image=us-central1-docker.pkg.dev/${PROJECT_ID}/u5-g02-repo-20260919/u6-g02-img-20260919:v1 \
   --region=us-central1 \
   --no-allow-unauthenticated \
-  --service-account=u5-g02-sa-20260914@${PROJECT_ID}.iam.gserviceaccount.com \
+  --service-account=u5-g02-sa-20260919@${PROJECT_ID}.iam.gserviceaccount.com \
   --min-instances=0 --max-instances=1 --memory=512Mi --port=8501 \
   --set-env-vars="CLOUD_RUN_URL=${API_URL%/predict},BQ_PROJECT=${PROJECT_ID},BQ_DATASET=u6_g02_data_20260919"
 ```
 
-Recuerda darle a la SA (`u5-g02-sa-20260914`) el rol `roles/bigquery.dataViewer`
+Recuerda darle a la SA (`u5-g02-sa-20260919`) los roles `roles/bigquery.jobUser`
+y `roles/bigquery.dataViewer` (este último solo sobre el dataset)
 sobre el dataset `u6_g02_data_20260919` para que el Streamlit pueda leer las
 tablas.
 
@@ -207,7 +208,7 @@ gcloud run services delete u6-g02-cr-20260919 --region=us-central1 --quiet
 ```
 
 **NO borrar** (según la guía y las Pautas):
-- `u5-g02-cr-20260914` (servicio de U5)
+- `u5-g02-cr-20260919` (servicio de U5 creado por el despliegue reproducible)
 - El bucket del modelo (`computacionnube20262-u4-class-mdl-20260914`)
 - El Model Registry
 - Las imágenes de Artifact Registry

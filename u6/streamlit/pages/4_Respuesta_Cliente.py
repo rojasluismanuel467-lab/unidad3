@@ -1,4 +1,4 @@
-"""D6 — Respuesta al cliente: que paso, que significa, que recomendamos."""
+"""D6 — Respuesta al cliente: qué pasó, qué significa y qué recomendamos."""
 from __future__ import annotations
 
 import json
@@ -21,15 +21,15 @@ r = H["D6_respuesta_cliente"]
 
 page_header(
     "Respuesta al cliente",
-    "Correo de vuelta a la Direccion de Retencion, con los tres puntos que "
-    "plantearon: que paso, que significa, que recomendamos.",
+    "Correo de vuelta a la Dirección de Retención, con los tres puntos que "
+    "plantearon: qué pasó, qué significa y qué recomendamos.",
     directriz="D6",
 )
 
 # ---------------------------------------------------------------------------
-# 1. Que paso
+# 1. Qué pasó
 # ---------------------------------------------------------------------------
-st.header("1. Que paso")
+st.header("1. Qué pasó")
 st.markdown(f"> {r['que_paso']['titular']}")
 
 with st.expander("Evidencia 1 — Valores nuevos de PaymentMethod (49 % de los rechazos)",
@@ -49,10 +49,10 @@ with st.expander("Evidencia 2 — Drift material en `tenure`", expanded=True):
 with st.expander("Evidencia 3 — Drift material en `MonthlyCharges`", expanded=True):
     st.markdown(r["que_paso"]["evidencia_3_drift_material_monthlycharges"])
 
-with st.expander("Evidencia 4 — `Contract` estable (no todo cambio)"):
+with st.expander("Evidencia 4 — `Contract` estable (no todo cambió)"):
     st.markdown(r["que_paso"]["evidencia_4_contract_estable"])
 
-with st.expander("Evidencia 5 — La tasa de rechazo confirma el patron"):
+with st.expander("Evidencia 5 — La tasa de rechazo confirma el patrón"):
     st.markdown(r["que_paso"]["evidencia_5_tasa_rechazo"])
 
 st.subheader("PSI promedio por feature vs training")
@@ -67,24 +67,24 @@ if psi_prom:
     )
 
 # ---------------------------------------------------------------------------
-# 2. Que significa
+# 2. Qué significa
 # ---------------------------------------------------------------------------
-st.header("2. Que significa")
+st.header("2. Qué significa")
 st.markdown(f"> {r['que_significa']['titular']}")
 
-st.subheader("Hipotesis 1 — Medios de pago expandidos")
+st.subheader("Hipótesis 1 — Medios de pago expandidos")
 st.markdown(r["que_significa"]["hipotesis_1_medios_pago_expandidos"])
 
-st.subheader("Hipotesis 2 — Campana de adquisicion nueva")
+st.subheader("Hipótesis 2 — Campaña de adquisición nueva")
 st.markdown(r["que_significa"]["hipotesis_2_campana_nueva"])
 
-st.subheader("Hipotesis 3 — El CRM cambio su criterio de alerta")
+st.subheader("Hipótesis 3 — El CRM cambió su criterio de alerta")
 st.markdown(r["que_significa"]["hipotesis_3_criterio_alerta_crm_cambió"])
 
 # ---------------------------------------------------------------------------
-# 3. Que recomendamos — semaforo semantico (unico lugar donde el color aporta)
+# 3. Qué recomendamos — semáforo semántico (único lugar donde el color aporta)
 # ---------------------------------------------------------------------------
-st.header("3. Que recomendamos")
+st.header("3. Qué recomendamos")
 
 recs = [
     ("Inmediato (hoy mismo)", r["que_recomendamos"]["inmediato_hoy_mismo"], "fail"),
@@ -118,7 +118,7 @@ for label, texto, tono in recs:
 st.header("Timeline del incidente")
 st.caption(
     "Formato Google SRE Workbook (cap. Postmortem Culture). Estructura los "
-    "eventos con dueno y fecha."
+    "eventos con dueño y fecha."
 )
 
 timeline = r.get("timeline_sre", [])
@@ -141,25 +141,11 @@ for e in timeline:
     )
 
 # ---------------------------------------------------------------------------
-# Action items
-# ---------------------------------------------------------------------------
-st.header("Action items")
-st.caption(
-    "Cada recomendacion se traduce en accion concreta con owner y due date, "
-    "priorizadas por impacto en la calidad del score."
-)
-
-items = r.get("action_items", [])
-if items:
-    df_i = pd.DataFrame(items)
-    st.dataframe(df_i, use_container_width=True, hide_index=True)
-
-# ---------------------------------------------------------------------------
 # Limites
 # ---------------------------------------------------------------------------
-st.header("Limites reconocidos del analisis")
+st.header("Límites reconocidos del análisis")
 st.caption(
-    "Explicito sobre lo que este analisis NO cubre — evita conclusiones "
+    "Explícito sobre lo que este análisis NO cubre: evita conclusiones "
     "sobredimensionadas. Basado en Gama 2014 (concept drift survey), Nixon "
     "2019 (calibration), Rabanser 2019 (MMD multivariado), Efron 1979 "
     "(bootstrap)."
@@ -170,7 +156,7 @@ for lim in r.get("limites_reconocidos_del_analisis", []):
 # ---------------------------------------------------------------------------
 # Conclusion
 # ---------------------------------------------------------------------------
-st.header("Conclusion para la reunion")
+st.header("Conclusión para la reunión")
 st.markdown(f"> {r['conclusion_para_la_reunion']}")
 
 footer(fuentes=["hallazgos_u6.json"])

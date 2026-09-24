@@ -87,7 +87,9 @@ def validar_fila(row: pd.Series) -> list[dict]:
         errs.append({"campo": "tenure", "tipo": "int_parsing_o_null", "valor": str(row["tenure"])})
     else:
         v = int(row["_tenure"])
-        if v < 0 or v > 100:
+        # U5 corrigió el contrato: 10+ años de antigüedad son plausibles
+        # en telecom y el schema acepta ahora de 0 a 200 meses.
+        if v < 0 or v > 200:
             errs.append({"campo": "tenure", "tipo": "range", "valor": v})
     if pd.isna(row["_MonthlyCharges"]):
         errs.append({"campo": "MonthlyCharges", "tipo": "float_parsing_o_null",
@@ -192,14 +194,15 @@ for semana, sub in df.groupby("fecha_lote"):
 
 H["D2_cuarentena"] = {
     "total_errores": len(todos_errores),
+    "filas_rechazadas": int(n_total - n_validas),
     "por_campo": dict(por_campo.most_common()),
     "por_tipo": dict(por_tipo.most_common()),
     "evolucion_semanal": errores_por_semana,
     "insight_texto_crudo": (
-        "La cuarentena guarda el registro completo como string. "
-        "Para agrupar por tipo de error hay que re-parsear cada fila "
-        "manualmente. Ese re-parseo es exactamente el trabajo que la "
-        "validación pydantic ya hizo. Diseño mejorable: guardar el "
+        "La cuarentena guarda el registro completo como texto. "
+        "Para agrupar por tipo de error hay que volver a analizar cada fila "
+        "manualmente. Ese reprocesamiento es exactamente el trabajo que la "
+        "validación de Pydantic ya hizo. Diseño mejorable: guardar el "
         "objeto RequestValidationError.errors() serializado como JSON "
         "separado, no solo el texto crudo."
     ),
@@ -266,11 +269,11 @@ H["D5_banco_pago"] = {
     "decision_defendible": (
         "Estrategia: (a) NO usar BancoPago como feature del modelo, "
         "porque el modelo actual no la conoce y agregarla requiere re-entrenar. "
-        "(b) SÍ canonicalizar los valores para uso operativo (dashboards, "
+        "(b) SÍ canonicalizar los valores para uso operativo (dashboards y "
         "análisis). El mapeo reduce las variantes de "
         f"{int(df['BancoPago'].nunique(dropna=True))} a "
         f"{int(df['BancoPago_canon'].nunique(dropna=True))}. "
-        "(c) Reportar al cliente que la captura mejoró desde 2026-07-27 "
+        "(c) Reportar al cliente que la captura mejoró desde 2026-07-27, "
         "pero requiere gobierno de datos (validación en el CRM)."
     ),
 }
@@ -465,6 +468,9 @@ valores_nuevos_payment = df[
 valores_nuevos_payment = {
     f"{k[0]} :: {k[1]}": int(v) for k, v in valores_nuevos_payment.items()
 }
+payment_errors = int(por_campo.get("PaymentMethod", 0))
+error_share_payment = round(payment_errors / max(len(todos_errores), 1) * 100, 1)
+last_two_weeks = por_semana.tail(2).to_dict(orient="records")
 
 H["D6_respuesta_cliente"] = {
     "que_paso": {
@@ -476,8 +482,9 @@ H["D6_respuesta_cliente"] = {
         "evidencia_1_valores_nuevos_paymentmethod": (
             "Desde 2026-08-24 el CRM empezó a mandar valores de PaymentMethod "
             "que no existen en el enum del contrato del modelo: PSE, PayPal, "
-            "Digital wallet, Corporate billing, Credit card (manual). Esto "
-            "explica el 49% de los rechazos (27 de 55)."
+            f"Digital wallet, Corporate billing, Credit card (manual). Esto "
+            f"representa {error_share_payment:.1f}% de los errores de campo "
+            f"({payment_errors} de {len(todos_errores)})."
         ),
         "evidencia_1_detalle_por_semana": valores_nuevos_payment,
         "evidencia_2_drift_material_tenure": (
@@ -496,9 +503,12 @@ H["D6_respuesta_cliente"] = {
         ),
         "evidencia_5_tasa_rechazo": (
             f"Semanas 1-8: rechazo entre 0% y 2%. "
-            f"Semana 2026-08-24: 18.7%. Semana 2026-08-31: 43.9%. "
+            f"Semana {last_two_weeks[0]['fecha_lote']}: "
+            f"{last_two_weeks[0]['tasa_rechazo_pct']:.2f}%. "
+            f"Semana {last_two_weeks[1]['fecha_lote']}: "
+            f"{last_two_weeks[1]['tasa_rechazo_pct']:.2f}%. "
             f"Umbral calibrado con 2σ desde baseline: {umbral_2sigma:.1f}%. "
-            f"Las semanas 9 y 10 están 7x-17x sobre el umbral."
+            f"Ambas semanas superan el umbral calculado."
         ),
         "psi_promedio_por_feature_vs_training": psi_promedio,
     },
@@ -535,8 +545,9 @@ H["D6_respuesta_cliente"] = {
             "AMPLIAR el enum de PaymentMethod en el contrato (U5 "
             "service/app/schemas.py) para aceptar PSE, PayPal, Digital "
             "wallet, Corporate billing, Credit card (manual). Esto "
-            "elimina el 49% de los rechazos que NO son datos malos, son "
-            "valores legítimos que el modelo no conocía. Redeploy del "
+            f"resuelve {error_share_payment:.1f}% de los errores de campo que "
+            "no son datos malos, sino valores legítimos que el modelo no "
+            "conocía. Redeploy del "
             "servicio."
         ),
         "corto_plazo_esta_semana": (
@@ -566,14 +577,14 @@ H["D6_respuesta_cliente"] = {
          "estado": "verde", "detalle": "Pipeline en operación normal, tasa rechazo 2%"},
         {"fecha": "2026-07-27", "evento": "BancoPago empieza a llegar",
          "estado": "amarillo", "detalle": "Columna nueva, captura imperfecta, no bloquea"},
-        {"fecha": "2026-08-24", "evento": "PRIMERA ALARMA — cuarentena 18.7%",
+        {"fecha": "2026-08-24", "evento": "PRIMERA ALARMA — cuarentena 13.19%",
          "estado": "rojo", "detalle": "PSI tenure salta a 5.0. Aparecen PSE y PayPal en PaymentMethod"},
-        {"fecha": "2026-08-31", "evento": "SEGUNDA ALARMA — cuarentena 43.9%",
+        {"fecha": "2026-08-31", "evento": "SEGUNDA ALARMA — cuarentena 30.30%",
          "estado": "rojo", "detalle": "PSI tenure 8.2. Se agregan Digital wallet, Corporate billing, Credit card (manual)"},
         {"fecha": "2026-09-19", "evento": "Análisis y respuesta al cliente",
          "estado": "azul", "detalle": "Este documento"},
         {"fecha": "2026-09-19 → 2026-09-26", "evento": "Ampliar enum en schema (owner: Grupo 2)",
-         "estado": "planificado", "detalle": "Fix inmediato; elimina 49% de los rechazos"},
+         "estado": "planificado", "detalle": "Fix inmediato; resuelve 73% de los errores de campo"},
         {"fecha": "2026-10-03", "evento": "Pausar scoring en segmento nuevo (owner: Dir. Retención)",
          "estado": "planificado", "detalle": "Corto plazo; documentar como 'fuera de dominio'"},
         {"fecha": "2026-10-31", "evento": "Reentrenamiento con últimas 8 semanas (owner: Grupo 2 + Dir. Retención)",
@@ -584,7 +595,7 @@ H["D6_respuesta_cliente"] = {
     "action_items": [
         {"item": "Ampliar enum PaymentMethod en service/app/schemas.py",
          "owner": "Grupo 2 (Gabriel)", "due": "2026-09-26",
-         "prioridad": "P0", "impacto": "Elimina 49% de los rechazos"},
+         "prioridad": "P0", "impacto": "Resuelve 73% de los errores de campo"},
         {"item": "Redeploy Cloud Run u5-g02-cr con nuevo schema",
          "owner": "Grupo 2 (David)", "due": "2026-09-26",
          "prioridad": "P0", "impacto": "Habilita scoring de clientes con medios nuevos"},

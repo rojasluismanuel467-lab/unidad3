@@ -31,7 +31,7 @@ Aplicacion Streamlit (monitor del pipeline):
 https://u6-g02-cr-20260919-978302928352.us-central1.run.app
 
 Servicio API U5 (churn scoring) que consume el monitor:
-https://u5-g02-cr-20260914-978302928352.us-central1.run.app
+https://u5-g02-cr-20260919-978302928352.us-central1.run.app
 
 Ambos con --no-allow-unauthenticated. Para acceso interactivo:
 gcloud run services proxy u6-g02-cr-20260919 --region=us-central1
@@ -58,7 +58,7 @@ Ubicacion del trabajo en el repo:
 
 ```bash
 # Cloud Run U5 (API)
-gcloud run services describe u5-g02-cr-20260914 --region=us-central1 --format='value(status.url)'
+gcloud run services describe u5-g02-cr-20260919 --region=us-central1 --format='value(status.url)'
 
 # Cloud Run U6 (Streamlit)
 gcloud run services describe u6-g02-cr-20260919 --region=us-central1 --format='value(status.url)'
@@ -113,9 +113,9 @@ Contexto:
 - Mi rol: replicar el deploy en <mi cuenta GCP / mi region>
 - El CSV a procesar tiene 703 clientes en 10 semanas y viene con drift
   (nuevos PaymentMethod: PSE, PayPal, Digital wallet)
-- El proyecto compartido del curso NO otorga serviceusage.services.use,
-  asi que el codigo usa gcloud CLI (subprocess) para GCS, BigQuery e
-  identity tokens en vez de los SDK Python
+- El DAG usa el CLI solo para GCS e identity tokens en Cloud Shell; las cargas
+  a BigQuery usan `bq load` y el dashboard usa el SDK Python para ejecutar
+  jobs de consulta reales.
 
 Ayudame a:
 1. Verificar que tengo los prerequisitos (gcloud, bq, docker instalados)
@@ -270,11 +270,11 @@ La profesora hace **2 preguntas por grupo**, escoge al azar quien responde cada 
 
 **Q1 — "Muestren el umbral y por que lo cambiarian"**
 Abrir pagina **Cuarentena** → tabla sensitivity → respuesta:
-"Calibramos con 2σ = 8.9 % usando las 4 primeras semanas (baseline pre-drift). Con umbral a dedo de 20 % habriamos perdido la alarma temprana de 2026-08-24 (18.7 % rechazo); con nuestro umbral saltamos una semana antes y ganamos tiempo de reaccion."
+"Calibramos con 2σ = 2.5 % usando las 4 primeras semanas (baseline pre-drift). Con umbral a dedo de 20 % habriamos perdido las alarmas de 2026-08-24 (13.19 %) y 2026-08-31 (30.30 %); con nuestro umbral detectamos ambas."
 
 **Q2 — "¿La poblacion cambio o el modelo se rompio?"**
 Abrir pagina **Drift** → PSI de tenure → respuesta:
-"La poblacion cambio, el modelo esta funcionando. Evidencia: PSI de tenure vs training pasa de 1.7 a 8.2 (umbral 0.25 segun Siddiqi 2006 → drift material 30x el umbral). MonthlyCharges tambien drifta pero Contract se mantiene estable → es un shift dirigido, no ruido general. Ademas, los 40 rechazos api_reject de la corrida buena son valores nuevos de PaymentMethod (PSE, PayPal) — no data mala, medios de pago que la empresa ahora acepta y que el enum del contrato no contempla."
+"La poblacion cambio, el modelo esta funcionando. Evidencia: PSI de tenure vs training pasa de 1.7 a 8.2 (umbral 0.25 segun Siddiqi 2006 → drift material 30x el umbral). MonthlyCharges tambien drifta pero Contract se mantiene estable → es un shift dirigido, no ruido general. Ademas, 27 errores de campo corresponden a valores nuevos de PaymentMethod (PSE, PayPal) — no data mala, sino medios de pago que la empresa ahora acepta y que el enum del contrato no contempla."
 
 **Q3 — "¿Que hacen con BancoPago?"**
 Abrir pagina **BancoPago** → 4 alternativas → respuesta:
@@ -302,11 +302,10 @@ Entre corrida 2 y 3 la cuarentena bajo de 50 a 36 filas gracias al fix del schem
 
 | Sintoma | Causa | Fix |
 |---|---|---|
-| `serviceusage.services.use denied` | Proyecto compartido sin permiso | Usar `gcloud`/`bq` CLI (subprocess) en vez de SDK Python |
-| `bigquery.jobs.create denied` | Sin permiso para queries | Usar `bq insert` (streaming) y `bq head` en vez de `bq query` |
+| `serviceusage.services.use denied` | Credencial local sin ese permiso | Ejecutar el DAG en Cloud Shell o corregir IAM antes de usar SDKs |
+| `bigquery.jobs.create denied` | Cuenta de ejecución sin permiso | Conceder `roles/bigquery.jobUser` a la cuenta de servicio del monitor |
 | `Setting IAM policy failed` en deploy | Org policy bloquea allUsers | Aceptar el warning, usar proxy para acceso interno |
 | WebSocket rechazado en Web Preview | CORS/XSRF activo | `--server.enableCORS=false --server.enableXsrfProtection=false` |
-| `bq head` falla con "Unknown flag 'n2000'" | Flag pegada al valor | Pasar `-n 2000` como dos args separados |
 | DAG dice "unrunnable tasks" | Alguna tarea fallo con retry | Ver el traceback en `airflow.log`, corregir y re-correr |
 
 ---

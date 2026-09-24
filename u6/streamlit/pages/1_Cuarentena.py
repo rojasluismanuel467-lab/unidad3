@@ -19,8 +19,8 @@ with open(ROOT / "analysis" / "hallazgos_u6.json") as f:
     H = json.load(f)
 
 page_header(
-    "Cuarentena y calibracion del umbral",
-    "Que umbral usa el DAG para disparar la alarma, y que hay en las filas "
+    "Cuarentena y calibración del umbral",
+    "Qué umbral usa el DAG para disparar la alarma y qué hay en las filas "
     "que quedan por fuera.",
     directriz="D1 + D2",
 )
@@ -33,23 +33,23 @@ st.header("Umbral del DAG")
 cal = H["D1_calibracion_umbral"]
 
 kpi_row([
-    ("Media rechazo (semanas 1-4)",
+    ("Media de rechazo (semanas 1–4)",
      f"{cal['primeras_4_semanas_media_rechazo_pct']}%",
      "Baseline pre-drift usado como referencia"),
-    ("Desviacion estandar",
+    ("Desviación estándar",
      f"{cal['primeras_4_semanas_std']}%",
      "Volatilidad natural del rechazo"),
     ("Umbral recomendado (2σ)",
      f"{cal['recomendado_pct']}%",
-     "Regla de 2 sigmas ≈ 95% de tolerancia a fluctuacion normal"),
-    ("Umbral 3σ (mas laxo)",
+     "Regla de 2 sigmas ≈ 95% de tolerancia a la fluctuación normal"),
+    ("Umbral 3σ (más laxo)",
      f"{cal['umbral_3sigma_pct']}%",
      None),
 ])
 
 st.markdown(
-    "El DAG dispara alerta cuando la tasa de rechazo supera un umbral. "
-    "Con 10 semanas de historia calibramos el numero con evidencia."
+    "El DAG dispara una alerta cuando la tasa de rechazo supera un umbral. "
+    "Con 10 semanas de historia calibramos el número con evidencia."
 )
 
 with st.expander("Justificacion tecnica del umbral 2σ", expanded=False):
@@ -59,11 +59,11 @@ st.subheader("Tasa de rechazo por semana")
 por_sem = pd.DataFrame(H["D1_tasa_rechazo_por_semana"])
 st.bar_chart(por_sem.set_index("fecha_lote")["tasa_rechazo_pct"], height=280)
 
-st.subheader("Sensitivity — cuantas semanas dispararian alarma segun el umbral")
+st.subheader("Sensibilidad — cuántas semanas dispararían alarma según el umbral")
 sens = cal["sensitivity"]
 sens_df = pd.DataFrame({
     "Umbral": ["Recomendado (2σ)", "5%", "10%", "20%"],
-    "Semanas que disparan alarma": [
+    "Semanas que disparan la alarma": [
         len(cal["semanas_que_disparan_2sigma"]),
         sens["si_umbral_es_5pct"],
         sens["si_umbral_es_10pct"],
@@ -73,13 +73,14 @@ sens_df = pd.DataFrame({
 st.dataframe(
     sens_df, use_container_width=True, hide_index=True,
     column_config={
-        "Semanas que disparan alarma": st.column_config.NumberColumn(format="%d"),
+        "Semanas que disparan la alarma": st.column_config.NumberColumn(format="%d"),
     },
 )
 st.caption(
-    "Con un umbral fijado a dedo del 20% habriamos perdido la alarma temprana "
-    "de la semana 2026-08-24 (18.7% rechazo). Con 2σ la alarma habria saltado "
-    "una semana antes."
+    f"Con un umbral fijado a dedo del 20% no se alertaría en las dos últimas "
+    f"semanas ({por_sem.iloc[-2]['tasa_rechazo_pct']:.2f}% y "
+    f"{por_sem.iloc[-1]['tasa_rechazo_pct']:.2f}%). Con 2σ la primera alerta "
+    f"aparece en {cal['semanas_que_disparan_2sigma'][0]} en este histórico."
 )
 
 # ---------------------------------------------------------------------------
@@ -91,7 +92,7 @@ q = H["D2_cuarentena"]
 
 kpi_row([
     ("Errores detectados", f"{q['total_errores']:,}",
-     "Filas rechazadas en las 10 semanas"),
+     "Errores de campo acumulados en las filas rechazadas"),
     ("Campos distintos con error", str(len(q["por_campo"])), None),
     ("Tipos de error", str(len(q["por_tipo"])), None),
 ])
@@ -115,7 +116,7 @@ with col2:
         column_config={"N errores": st.column_config.NumberColumn(format="%d")},
     )
 
-st.subheader("Evolucion semanal")
+st.subheader("Evolución semanal")
 evol_rows = []
 for w in q["evolucion_semanal"]:
     for campo, n in w["top_campos"]:
@@ -130,7 +131,7 @@ if not evol_df.empty:
         st.dataframe(piv, use_container_width=True)
 
 st.caption(
-    "**Insight sobre el diseno de la cuarentena.** " + q["insight_texto_crudo"]
+    "**Hallazgo sobre el diseño de la cuarentena.** " + q["insight_texto_crudo"]
 )
 
 # ---------------------------------------------------------------------------
@@ -168,10 +169,10 @@ if len(nuevos):
     )
 
     st.markdown(
-        "**Diagnostico.** Los valores son legitimos: el CRM los envia porque "
-        "son medios de pago reales que la empresa ahora acepta. El schema del "
-        "contrato en `service/app/schemas.py` (U5) esta desactualizado.  \n"
-        "**Fix inmediato.** Ampliar el enum `PaymentMethod` para incluir PSE, "
+        "**Diagnóstico.** Los valores son legítimos: el CRM los envía porque "
+        "son medios de pago reales que la empresa ahora acepta. El esquema del "
+        "contrato en `service/app/schemas.py` (U5) está desactualizado.  \n"
+        "**Corrección inmediata.** Ampliar el enum `PaymentMethod` para incluir PSE, "
         "PayPal, Digital wallet, Corporate billing, Credit card (manual)."
     )
 

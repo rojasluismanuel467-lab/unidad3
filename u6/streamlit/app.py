@@ -10,7 +10,7 @@ from _shared import (
     apply_page_config, sidebar_branding, page_header, kpi_row, footer,
 )
 
-apply_page_config(page_title="Monitor pipeline retencion")
+apply_page_config(page_title="Monitor del pipeline de retención")
 sidebar_branding()
 
 ROOT = Path(__file__).resolve().parent
@@ -19,9 +19,9 @@ ROOT = Path(__file__).resolve().parent
 # Header
 # ---------------------------------------------------------------------------
 page_header(
-    "Monitor del pipeline de retencion",
+    "Monitor del pipeline de retención",
     "Escobar A00399291 · Artunduaga A00396342 · Rojas A00399289 · "
-    "Curso Computacion en la Nube para IA · Prof. Diana Jaimes",
+    "Curso Computación en la Nube para IA · Prof. Diana Jaimes",
 )
 
 # ---------------------------------------------------------------------------
@@ -32,10 +32,16 @@ try:
         H = json.load(f)
 except FileNotFoundError:
     st.error(
-        "No se encontro `analysis/hallazgos_u6.json`.  \n"
-        "**Que hacer:** corre `python u6/analysis/run_analysis.py` para regenerar."
+        "No se encontró `analysis/hallazgos_u6.json`.  \n"
+        "**Qué hacer:** ejecuta `python u6/analysis/run_analysis.py` para regenerarlo."
     )
     st.stop()
+
+drift_vs_training = H.get("D3_D4_drift", {}).get("vs_training_U4", {})
+n_features_drift = sum(
+    bool(observations) and observations[-1].get("psi", 0) > 0.25
+    for observations in drift_vs_training.values()
+)
 
 # ---------------------------------------------------------------------------
 # KPIs — lo primero que ve la Direccion de Retencion
@@ -46,9 +52,9 @@ kpi_row([
     ("Clientes en el lote", f"{H['meta']['csv_filas']:,}",
      "Total de filas del CSV lotes_retencion_u6.csv"),
     ("Tasa de rechazo", f"{H['D1_agregado']['tasa_rechazo_pct']:.1f}%",
-     "Fraccion rechazada por el API en el batch completo"),
+     "Fracción rechazada por la API en el lote completo"),
     ("Features con drift material",
-     str(H.get("D3_drift", {}).get("n_features_drift", "—")),
+     str(n_features_drift),
      "Features con PSI > 0.25 vs training set (Siddiqi 2006)"),
 ])
 
@@ -56,9 +62,9 @@ kpi_row([
 # Titular ejecutivo
 # ---------------------------------------------------------------------------
 st.markdown(
-    "El pipeline detecto la degradacion antes de que impactara mas campanas. "
-    "**El modelo no se rompio — la poblacion cambio.**  \n"
-    "Los detalles y el plan de respuesta estan en las vistas laterales."
+    "El pipeline detectó la degradación antes de que impactara más campañas. "
+    "**El modelo no se rompió — la población cambió.**  \n"
+    "Los detalles y el plan de respuesta están en las vistas laterales."
 )
 
 # ---------------------------------------------------------------------------
@@ -67,11 +73,11 @@ st.markdown(
 st.header("Vistas del monitor")
 
 vistas = [
-    ("Cuarentena", "Que se rechazo y por que. Distribucion por semana y tipo de error.", "D1+D2"),
-    ("Drift", "PSI y KS-test por feature. Cambio de poblacion vs training.", "D3+D4"),
-    ("BancoPago", "Columna nueva no conocida por el modelo. Analisis de impacto.", "D5"),
-    ("Respuesta Cliente", "Timeline SRE + accion recomendada.", "D6"),
-    ("Prediccion Individual", "Consultar el modelo desplegado en Cloud Run.", "—"),
+    ("Cuarentena", "Qué se rechazó y por qué. Distribución por semana y tipo de error.", "D1+D2"),
+    ("Drift", "PSI y KS-test por feature. Cambio de población frente al training.", "D3+D4"),
+    ("BancoPago", "Columna nueva que el modelo no conoce. Análisis de impacto.", "D5"),
+    ("Respuesta al cliente", "Línea de tiempo SRE y acción recomendada.", "D6"),
+    ("Predicción individual", "Consultar el modelo desplegado en Cloud Run.", "—"),
     ("Consulta BQ", "Tablas `resultados` y `cuarentena` cargadas por el DAG.", "—"),
 ]
 
@@ -94,8 +100,8 @@ for i, (titulo, descripcion, tag) in enumerate(vistas):
 st.header("Fuentes")
 st.markdown(
     f"""
-- **CSV en produccion**: `lotes_retencion_u6.csv` ({H['meta']['csv_filas']} filas, {H['meta']['n_semanas']} semanas)
-- **Modelo**: `u4_g02_mdl_20260914` — XGBoost calibrado, desplegado como `u5-g02-cr-20260914`
+- **CSV en producción**: `lotes_retencion_u6.csv` ({H['meta']['csv_filas']} filas, {H['meta']['n_semanas']} semanas)
+- **Modelo**: `u4_g02_mdl_20260914` — XGBoost calibrado, desplegado como `u5-g02-cr-20260919`
 - **Baseline drift**: X_train de U4 ({H.get('meta', {}).get('baseline_filas', 'N/A')} filas)
 - **DAG**: `pipeline_mlops_churn` (Airflow 3.3.2) carga a `computacionnube20262.u6_g02_data_20260919`
 """

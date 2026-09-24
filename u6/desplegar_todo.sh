@@ -37,6 +37,7 @@ GNN="${GNN:-g02}"
 FECHA="${FECHA:-20260919}"        # fecha en los nombres de recursos
 REPO_URL="${REPO_URL:-https://github.com/rojasluismanuel467-lab/unidad3.git}"
 REPO_DIR="${REPO_DIR:-$HOME/unidad3}"
+REPO_USE_LOCAL="${REPO_USE_LOCAL:-0}"
 SKIP_DAG="${SKIP_DAG:-0}"
 
 # Derivados (no tocar)
@@ -47,6 +48,11 @@ BUCKET="u6-${GNN}-bucket-${FECHA}"
 DATASET="u6_${GNN}_data_${FECHA}"
 U5_SERVICE="u5-${GNN}-cr-${FECHA}"
 U6_SERVICE="u6-${GNN}-cr-${FECHA}"
+MODEL_BUCKET="${MODEL_BUCKET:-u4-${GNN}-mdl-20260917}"
+MODEL_OBJECT="${MODEL_OBJECT:-u4_g02_mdl_20260914/model.joblib}"
+MODEL_FILE="${MODEL_FILE:-$REPO_DIR/artifacts/u4/u4_g02_mdl_20260914_ganador.joblib}"
+MODEL_VERSION="${MODEL_VERSION:-u4_g02_mdl_20260914}"
+MODEL_GCS_URI="gs://${MODEL_BUCKET}/${MODEL_OBJECT}"
 IMAGE_U5="us-central1-docker.pkg.dev/${PROJECT}/${AR_REPO}/u5-${GNN}-api:v1"
 IMAGE_U6="us-central1-docker.pkg.dev/${PROJECT}/${AR_REPO}/u6-${GNN}-streamlit:v1"
 
@@ -77,6 +83,7 @@ Recursos que se crearan/reutilizaran:
   Service Account:   $SA_EMAIL
   Artifact Registry: $AR_REPO
   GCS Bucket:        gs://$BUCKET
+  Model bucket:      gs://$MODEL_BUCKET
   BigQuery dataset:  $PROJECT:$DATASET
   Cloud Run U5:      $U5_SERVICE
   Cloud Run U6:      $U6_SERVICE
@@ -112,6 +119,8 @@ paso "2/9 · Clonando repo si hace falta"
 if [[ ! -d "$REPO_DIR" ]]; then
   git clone "$REPO_URL" "$REPO_DIR"
   ok "Repo clonado en $REPO_DIR"
+elif [[ "$REPO_USE_LOCAL" == "1" ]]; then
+  ok "Usando repo local sin hacer pull: $REPO_DIR"
 else
   cd "$REPO_DIR" && git pull --ff-only origin main 2>&1 | tail -1
   ok "Repo actualizado en $REPO_DIR"
@@ -172,6 +181,39 @@ else
   ok "CSV subido a gs://$BUCKET/input/"
 fi
 
+if [[ ! -f "$MODEL_FILE" ]]; then
+  fail "No existe el bundle ganador: $MODEL_FILE"
+fi
+if gcloud storage buckets describe "gs://$MODEL_BUCKET" --project=$PROJECT >/dev/null 2>&1; then
+  ok "Bucket del modelo ya existe: gs://$MODEL_BUCKET"
+else
+  gcloud storage buckets create "gs://$MODEL_BUCKET" \
+    --project="$PROJECT" --location="$REGION" \
+    --uniform-bucket-level-access >/dev/null
+  ok "Bucket del modelo creado: gs://$MODEL_BUCKET"
+fi
+if gcloud storage ls "gs://$MODEL_BUCKET/$MODEL_OBJECT" >/dev/null 2>&1; then
+  ok "Bundle del modelo ya subido"
+else
+  gcloud storage cp "$MODEL_FILE" "gs://$MODEL_BUCKET/$MODEL_OBJECT" >/dev/null
+  ok "Bundle del modelo subido: $MODEL_GCS_URI"
+fi
+
+# La API U5 descarga el bundle al arrancar; el acceso queda limitado a su SA.
+gcloud storage buckets add-iam-policy-binding "gs://$MODEL_BUCKET" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/storage.objectViewer" --quiet >/dev/null
+ok "Acceso de lectura al bucket del modelo configurado"
+
+# El dashboard lee el CSV de entrada para contextualizar los lotes.
+if gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" \
+    --member="serviceAccount:${SA_EMAIL}" \
+    --role="roles/storage.objectViewer" --quiet >/dev/null 2>&1; then
+  ok "Acceso de lectura al bucket de datos configurado"
+else
+  warn "No se pudo configurar objectViewer en el bucket de datos"
+fi
+
 # ---------------------------------------------------------------------------
 # 6. BigQuery dataset + tablas
 # ---------------------------------------------------------------------------
@@ -184,27 +226,30 @@ else
   ok "Dataset creado: $DATASET"
 fi
 
-# Tabla resultados
-if bq show "$PROJECT:$DATASET.resultados" >/dev/null 2>&1; then
-  ok "Tabla resultados ya existe"
-else
-  bq mk --table "$PROJECT:$DATASET.resultados" \
-    "run_id:STRING,archivo:STRING,customer_id:STRING,fecha_lote:DATE,\
-customer_risk_score:FLOAT64,predicted_churn:BOOL,threshold_used:FLOAT64,\
-model_version:STRING,predicted_at:TIMESTAMP,requested_by:STRING,\
-loaded_at:TIMESTAMP" >/dev/null
-  ok "Tabla resultados creada"
-fi
+# Tablas + vista: el DDL es la única fuente de verdad del esquema.
+# `bq query` crea un job real y evita que el script diverja del DAG.
+sed "s/u6_g02_data_20260919/${DATASET}/g" \
+  "$REPO_DIR/u6/dag/u6-g02-sql-20260919.sql" \
+  | bq query --project_id="$PROJECT" --location="$REGION" \
+      --use_legacy_sql=false >/dev/null
+ok "Dataset, tablas y vista BigQuery creados/verificados mediante query job"
 
-# Tabla cuarentena
-if bq show "$PROJECT:$DATASET.cuarentena" >/dev/null 2>&1; then
-  ok "Tabla cuarentena ya existe"
+# El dashboard corre con esta identidad: necesita leer el dataset y crear
+# query jobs para consultar las tablas desde Cloud Run.
+if gcloud projects add-iam-policy-binding "$PROJECT" \
+    --member="serviceAccount:${SA_EMAIL}" \
+    --role="roles/bigquery.jobUser" \
+    --quiet >/dev/null 2>&1; then
+  if bq add-iam-policy-binding \
+      --member="serviceAccount:${SA_EMAIL}" \
+      --role="roles/bigquery.dataViewer" \
+      --dataset "$PROJECT:$DATASET" >/dev/null 2>&1; then
+    ok "Permisos BigQuery configurados para la cuenta de servicio"
+  else
+    warn "No se pudo configurar dataViewer en el dataset; la administradora debe habilitarlo"
+  fi
 else
-  bq mk --table "$PROJECT:$DATASET.cuarentena" \
-    "run_id:STRING,archivo:STRING,customer_id:STRING,fecha_lote:DATE,\
-http_status:INT64,error_type:STRING,error_detail:STRING,raw:STRING,\
-quarantined_at:TIMESTAMP" >/dev/null
-  ok "Tabla cuarentena creada"
+  warn "No se pudo configurar roles/bigquery.jobUser; la administradora debe otorgarlo a ${SA_EMAIL}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -213,7 +258,7 @@ fi
 paso "7/9 · Deploy U5 (API scoring)"
 
 log "Building imagen U5..."
-docker build --quiet -t "$IMAGE_U5" -f "$REPO_DIR/service/Dockerfile" "$REPO_DIR/service/" >/dev/null
+docker build --platform linux/amd64 --quiet -t "$IMAGE_U5" -f "$REPO_DIR/service/Dockerfile" "$REPO_DIR/service/" >/dev/null
 ok "Imagen U5 construida"
 
 log "Pushing a Artifact Registry..."
@@ -227,26 +272,40 @@ gcloud run deploy "$U5_SERVICE" \
   --no-allow-unauthenticated \
   --min-instances=0 --max-instances=1 \
   --service-account="$SA_EMAIL" \
+  --set-env-vars="MODEL_GCS_URI=${MODEL_GCS_URI},MODEL_VERSION=${MODEL_VERSION}" \
   --quiet 2>&1 | tail -2
 
 U5_URL=$(gcloud run services describe "$U5_SERVICE" \
   --region=$REGION --project=$PROJECT --format='value(status.url)')
 ok "U5 desplegado: $U5_URL"
 
+# U6 usa la misma cuenta de servicio para invocar el API privado de U5.
+if gcloud run services add-iam-policy-binding "$U5_SERVICE" \
+    --region="$REGION" --project="$PROJECT" \
+    --member="serviceAccount:${SA_EMAIL}" \
+    --role="roles/run.invoker" --quiet >/dev/null 2>&1; then
+  ok "Invocación privada U5 habilitada para la cuenta de servicio del grupo"
+else
+  warn "No se pudo otorgar run.invoker a la cuenta de servicio; la administradora debe habilitarlo"
+fi
+
 # Smoke test
 log "Smoke test contra U5..."
-TOKEN=$(gcloud auth print-identity-token --audiences="$U5_URL")
-RESP=$(curl -sS -o /tmp/u5_smoke.json -w "%{http_code}" \
-  -X POST "$U5_URL/predict" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"customer_id":"SMOKE","gender":"Female","partner":true,"dependents":false,"tenure":12,"contract":"Month-to-month","payment_method":"Electronic check","monthly_charges":70.5,"internet_service":"Fiber optic","online_security":"No","tech_support":"No"}')
+if TOKEN=$(gcloud auth print-identity-token --audiences="$U5_URL" 2>/dev/null); then
+  RESP=$(curl -sS -o /tmp/u5_smoke.json -w "%{http_code}" \
+    -X POST "$U5_URL/predict" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"customer_id":"SMOKE","gender":"Female","partner":true,"dependents":false,"tenure":12,"contract":"Month-to-month","payment_method":"Electronic check","monthly_charges":70.5,"internet_service":"Fiber optic","online_security":"No","tech_support":"No"}')
 
-if [[ "$RESP" == "200" ]]; then
-  ok "U5 responde HTTP 200"
+  if [[ "$RESP" == "200" ]]; then
+    ok "U5 responde HTTP 200"
+  else
+    warn "U5 smoke test devolvio HTTP $RESP — revisa /tmp/u5_smoke.json"
+    cat /tmp/u5_smoke.json
+  fi
 else
-  warn "U5 smoke test devolvio HTTP $RESP — revisa /tmp/u5_smoke.json"
-  cat /tmp/u5_smoke.json
+  warn "Smoke test omitido: la cuenta activa no permite generar un token de audiencia para un servicio privado"
 fi
 
 # ---------------------------------------------------------------------------
@@ -294,7 +353,7 @@ fi
 paso "9/9 · Deploy U6 (Streamlit dashboard)"
 
 log "Building imagen U6..."
-docker build --quiet -t "$IMAGE_U6" -f "$REPO_DIR/u6/streamlit/Dockerfile" "$REPO_DIR/u6/" >/dev/null
+docker build --platform linux/amd64 --quiet -t "$IMAGE_U6" -f "$REPO_DIR/u6/streamlit/Dockerfile" "$REPO_DIR/u6/" >/dev/null
 ok "Imagen U6 construida"
 
 log "Pushing a Artifact Registry..."
@@ -339,6 +398,7 @@ Recursos creados (para limpiar despues):
   bq rm -r -f --dataset $PROJECT:$DATASET
   gcloud artifacts repositories delete $AR_REPO --location=$REGION --quiet
   gcloud iam service-accounts delete $SA_EMAIL --quiet
+  # El bucket del modelo pertenece a U4 y se conserva para reutilizarlo.
 
 Suerte con la sustentacion.
 RESUMEN
