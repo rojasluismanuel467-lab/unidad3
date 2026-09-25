@@ -31,6 +31,14 @@ page_header(
 
 U5_SERVICE_NAME = os.getenv("U5_SERVICE_NAME", "u5-g02-cr-20260919")
 U5_REGION = os.getenv("U5_REGION", "us-central1")
+# U5 conserva min-instances=0 por requerimiento del curso, así que la primera
+# petición después de un periodo inactivo debe tolerar el arranque en frío.
+U5_CONNECT_TIMEOUT_SECONDS = float(
+    os.getenv("U5_CONNECT_TIMEOUT_SECONDS", "10")
+)
+U5_READ_TIMEOUT_SECONDS = float(
+    os.getenv("U5_READ_TIMEOUT_SECONDS", "120")
+)
 
 
 def _fetch_id_token(audience: str) -> str:
@@ -153,8 +161,19 @@ if submitted:
                     "Authorization": f"Bearer {token}",
                     "Content-Type": "application/json",
                 },
-                timeout=15,
+                timeout=(
+                    U5_CONNECT_TIMEOUT_SECONDS,
+                    U5_READ_TIMEOUT_SECONDS,
+                ),
             )
+    except requests.ReadTimeout:
+        st.error(
+            "El API no respondió antes del límite de "
+            f"{U5_READ_TIMEOUT_SECONDS:g} segundos. Como U5 usa "
+            "`min-instances=0`, su primera llamada puede incluir el arranque "
+            "en frío. Intenta nuevamente; si persiste, revisa los logs de U5."
+        )
+        st.stop()
     except Exception as e:
         st.error(
             f"Falló la petición: `{type(e).__name__}: {e}`  \n"
